@@ -16,6 +16,11 @@ import java.awt.event.InputEvent;
 import java.awt.event.WindowEvent;
 import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
@@ -81,6 +86,37 @@ class DashboardDesktopTest {
                     snapshot.adapterName(), active.index(), snapshot.receiveMbps().orElseThrow(),
                     snapshot.sendMbps().orElseThrow(), snapshot.totalReceivedBytes(), snapshot.totalSentBytes());
 
+            // Generate real adapter traffic by reading a public Java API page, never by inserting graph values.
+            try (HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()) {
+                HttpRequest request = HttpRequest.newBuilder(URI.create(
+                        "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/net/NetworkInterface.html"))
+                        .timeout(Duration.ofSeconds(10)).GET().build();
+                var response = http.send(request, HttpResponse.BodyHandlers.discarding());
+                System.out.println("Real HTTP adapter traffic source returned status " + response.statusCode());
+            } catch (java.io.IOException exception) {
+                System.out.println("HTTP traffic source unavailable; observing existing adapter traffic: " + exception.getMessage());
+            }
+            waitFor(() -> panel.graphHistory.getWindow().samples().stream()
+                    .filter(sample -> sample.downloadMbps().isPresent()).count() >= 3,
+                    15_000, "Graphs did not collect successive real adapter readings.");
+            SwingUtilities.invokeAndWait(() -> {
+                var window = panel.graphHistory.getWindow();
+                assertTrue(window.running());
+                assertTrue(window.samples().stream().anyMatch(sample -> sample.downloadMbps().orElse(0) > 0
+                        || sample.uploadMbps().orElse(0) > 0), "A real network activity sample is required.");
+                System.out.println("GUI GRAPHS VERIFIED: " + window.samples().size()
+                        + " distinct adapter readings; zero/absent readings are not fabricated.");
+            });
+            Dimension originalSize = onEdt(frame::getSize);
+            int originalGraphWidth = onEdt(panel.downloadGraph::getWidth);
+            SwingUtilities.invokeAndWait(() -> frame.setSize(860, 640));
+            robot.waitForIdle();
+            waitFor(() -> panel.downloadGraph.getWidth() < originalGraphWidth,
+                    3_000, "Graph width did not adapt to a smaller window.");
+            assertTrue(onEdt(panel.downloadGraph::getWidth) >= 250);
+            SwingUtilities.invokeAndWait(() -> frame.setSize(originalSize));
+            robot.waitForIdle();
+
             click(robot, panel.startTestButton);
             waitFor(() -> panel.startTestButton.isEnabled() && panel.testMessage.getText().contains("Cannot connect"),
                     5_000, "Missing TCP server did not produce a clear error.");
@@ -110,12 +146,23 @@ class DashboardDesktopTest {
                 Files.createDirectories(screenshot.getParent());
                 ImageIO.write(robot.createScreenCapture(onEdt(frame::getBounds)), "png", screenshot.toFile());
                 System.out.println("GUI screenshot: " + screenshot.toAbsolutePath());
+                SwingUtilities.invokeAndWait(() -> panel.downloadGraph.scrollRectToVisible(
+                        new Rectangle(0, 0, panel.downloadGraph.getWidth(), panel.downloadGraph.getHeight())));
+                robot.waitForIdle();
+                Path graphScreenshot = Path.of("target", "netpulse-graphs.png");
+                ImageIO.write(robot.createScreenCapture(onEdt(frame::getBounds)), "png", graphScreenshot.toFile());
+                System.out.println("GUI graph screenshot: " + graphScreenshot.toAbsolutePath());
             }
 
             click(robot, panel.stopMonitoringButton);
             waitFor(() -> panel.monitoringStatus.getText().equals("Stopped")
                     && panel.startMonitoringButton.isEnabled(), 8_000, "Monitoring did not stop.");
             assertEquals(NetworkStatisticsSnapshot.State.STOPPED, onEdt(() -> panel.displayedSnapshot.state()));
+            var frozenGraph = onEdt(panel.graphHistory::getWindow);
+            assertFalse(frozenGraph.running());
+            assertFalse(frozenGraph.samples().isEmpty());
+            Thread.sleep(1_200); // Off the EDT: allow multiple display ticks to verify the graph remains frozen.
+            assertEquals(frozenGraph, onEdt(panel.graphHistory::getWindow));
 
             // Exercise an unavailable Windows interface through the actual dashboard.
             NetworkAdapter loopback = onEdt(() -> {
@@ -135,6 +182,9 @@ class DashboardDesktopTest {
             assertEquals(loopback.index(), onEdt(() -> panel.displayedSnapshot.adapter().index()));
             assertEquals("--", onEdt(panel.downloadValue::getText));
             assertTrue(onEdt(panel.monitorMessage::getText).contains("PowerShell"));
+            waitFor(() -> panel.graphHistory.getWindow().samples().stream()
+                    .anyMatch(sample -> sample.downloadMbps().isEmpty() && sample.uploadMbps().isEmpty()),
+                    3_000, "Unavailable graph reading was not preserved as a gap.");
             click(robot, panel.stopMonitoringButton);
             waitFor(panel.startMonitoringButton::isEnabled, 8_000, "Unavailable monitor did not stop.");
 
@@ -147,8 +197,9 @@ class DashboardDesktopTest {
             waitFor(() -> !frame.isDisplayable(), 10_000, "Dashboard did not close cleanly.");
         }
         assertTrue(Thread.getAllStackTraces().keySet().stream()
-                .noneMatch(thread -> thread.isAlive() && thread.getName().equals("netpulse-adapter-monitor")));
-        System.out.println("GUI VERIFIED: adapter selection, timer updates, unavailable adapter, TCP errors, both modes, and shutdown.");
+                .noneMatch(thread -> thread.isAlive() && (thread.getName().equals("netpulse-adapter-monitor")
+                        || thread.getName().equals("netpulse-graph-collector"))));
+        System.out.println("GUI VERIFIED: live graphs, graph freeze, resizing, adapter controls, TCP tests, and shutdown.");
     }
 
     private static void click(Robot robot, JComponent component) throws Exception {

@@ -1,13 +1,12 @@
 # NetPulse - Network Bandwidth Monitoring and Analysis System
 
 NetPulse is a college Computer Networks project with a Swing dashboard for
-network adapter monitoring and TCP bandwidth tests. Future phases will add
-real-time graphs and monitoring history stored in SQLite.
+network adapter monitoring, real-time bandwidth graphs, and TCP bandwidth tests.
+Future phases will add monitoring history stored in SQLite.
 
-Phase 5 adds a dark-themed Java Swing dashboard for the existing Windows
-adapter monitor and TCP bandwidth tests. Adapter statistics and TCP payload
-measurements remain separate. Graphs, alerts, traffic analysis, and database
-operations are not implemented yet.
+Phase 6 adds separate live download and upload graphs to the dark-themed Swing
+dashboard. Adapter statistics and TCP payload measurements remain separate.
+Alerts, traffic analysis, and database operations are not implemented yet.
 
 ## Technologies
 
@@ -39,8 +38,10 @@ src/main/java/com/netpulse/
         DashboardPanel.java
         DashboardController.java
         DashboardStyle.java
+        BandwidthGraphPanel.java
     model/
         BandwidthSnapshot.java
+        BandwidthGraphHistory.java
         NetworkAdapter.java
         NetworkStatisticsSnapshot.java
         TransferResult.java
@@ -154,6 +155,56 @@ section and are never substituted for adapter readings.
 
 Socket cancellation reference:
 [JDK 25 Socket API](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/net/Socket.html).
+
+## Real-time bandwidth graphs
+
+The dashboard includes two custom-painted Swing panels: Download Speed (Mbps)
+and Upload Speed (Mbps). They use the existing `NetworkStatisticsSnapshot`
+receive/send rates, not the localhost TCP test results. No charting dependency
+or simulated values are used.
+
+`BandwidthGraphHistory` holds a shared pair of rates for each observed reading.
+A small background collector polls only the monitor's cached snapshot every
+200 ms. It forwards each new snapshot object to the EDT once. Repeated display
+refreshes never add the same snapshot again; a new reading with the same speed
+is still a valid new sample. Graph collection is independent of the 500 ms
+display/repaint timer, and it never launches additional PowerShell commands.
+
+`BandwidthGraphPanel` uses `Graphics2D` with antialiasing, rounded line ends,
+sample markers, adaptive Mbps axes, and a time axis from 60 seconds ago to Now.
+Straight segments join actual points; no smoothing algorithm changes the
+measured values. Both graph panels resize with the viewport. Vertical scrolling
+keeps the adapter controls, cards, graphs, and TCP section accessible on smaller
+laptop screens.
+
+The history uses an `ArrayDeque` with two bounds:
+
+- Points older than 60 seconds are removed when new readings arrive or the
+  running graph is painted. The visible time window continues to scroll even
+  while waiting for a reading.
+- At most 600 samples are retained, even if many readings arrive with the same
+  timestamp. Normal PowerShell sampling produces far fewer points per minute.
+
+Points use monotonic elapsed time from `System.nanoTime()`. A point's time is
+when its snapshot reaches the EDT, rather than an exact Windows counter-query
+timestamp. Collection and UI scheduling can therefore shift it slightly.
+
+Valid zero speeds are plotted at zero. Baseline, unavailable, reset, and invalid
+interval readings are stored as gaps; the line breaks rather than drawing fake
+zeros or connecting across missing data. Before starting, the graphs show an
+empty-state message. While waiting for a valid reading, they show a waiting or
+unavailable message. The graph does not extend the last value to invent data
+between the latest sample and Now.
+
+Stop Monitoring freezes both the samples and their time axis. The final graph
+remains readable until a new session starts or the adapter selection changes.
+Starting a new session clears old graph data. Closing the window also stops
+the graph collector, alongside the existing monitoring and TCP cleanup.
+
+Graphs show interval-average adapter throughput, not instantaneous packet
+traffic or available bandwidth capacity. PowerShell's existing sampling delay
+limits detail for short bursts. During the first minute, the portion before the
+session began is intentionally empty.
 
 ## Run TCP transfers
 
@@ -419,11 +470,16 @@ tests; the production adapter monitor always reads Windows counters.
 
 GUI unit tests check size conversion, snapshot rendering, adapter selection,
 result display, Event Dispatch Thread responsiveness, and cancellation of a
-blocked TCP read. They do not open a window or require real PowerShell counters.
+blocked TCP read. Graph tests cover sample collection, duplicate snapshots,
+60-second eviction, valid zeros, unavailable gaps, bounded memory, frozen
+stopped history, immutable views, and painting at different sizes. They do not
+open a window or require real PowerShell counters.
 
 An additional desktop test is opt-in because it opens a visible window, moves
 the mouse, reads real Windows counters, and temporarily starts a test server on
-port 5001. Close other NetPulse windows and stop any server on that port first.
+port 5001. It also attempts a small HTTPS download of a public Java API page to
+generate real adapter activity; if that request fails, it observes existing
+traffic. Close other NetPulse windows and stop any server on that port first.
 Run it on an interactive Windows desktop with an active adapter:
 
 ```shell
@@ -431,6 +487,7 @@ mvn test "-Dtest=DashboardDesktopTest" "-Dnetpulse.gui.smoke=true"
 ```
 
 It verifies opening the dashboard, adapter refresh/selection, real live speeds,
-monitor start/stop, an unavailable adapter, a missing TCP server, both transfer
-modes, and closing with monitoring active. It saves an actual screenshot to
-`target/netpulse-dashboard.png`. Normal `mvn test` skips this one desktop test.
+both graphs, resize behavior, frozen graphs after stopping, an unavailable
+adapter, a missing TCP server, both transfer modes, and closing with monitoring
+active. It saves actual screenshots to `target/netpulse-dashboard.png` and
+`target/netpulse-graphs.png`. Normal `mvn test` skips this one desktop test.

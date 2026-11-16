@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.netpulse.ui.DashboardDesktopTest" time="8.184" tests="1" errors="0" skipped="0" failures="0" flakes="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.netpulse.ui.DashboardDesktopTest" time="15.188" tests="1" errors="0" skipped="0" failures="0" flakes="0">
   <properties>
     <property name="java.specification.version" value="25"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -15,7 +15,7 @@
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="user.country" value="IN"/>
     <property name="sun.boot.library.path" value="C:\Program Files\Eclipse Adoptium\jdk-25.0.5.8-hotspot\bin"/>
-    <property name="sun.java.command" value="C:\Users\abhin\AppData\Local\Temp\surefire9621588657256542296\surefirebooter-20261117022650943_3.jar C:\Users\abhin\AppData\Local\Temp\surefire9621588657256542296 2026-11-17T02-26-50_851-jvmRun1 surefire-20261117022650943_1tmp surefire_0-20261117022650943_2tmp"/>
+    <property name="sun.java.command" value="C:\Users\abhin\AppData\Local\Temp\surefire1286578345765071917\surefirebooter-20261117023729246_3.jar C:\Users\abhin\AppData\Local\Temp\surefire1286578345765071917 2026-11-17T02-37-29_158-jvmRun1 surefire-20261117023729246_1tmp surefire_0-20261117023729246_2tmp"/>
     <property name="jdk.debug" value="release"/>
     <property name="test" value="DashboardDesktopTest"/>
     <property name="surefire.test.class.path" value="C:\Users\abhin\projects\NetPulse\target\test-classes;C:\Users\abhin\projects\NetPulse\target\classes;C:\Users\abhin\.m2\repository\org\xerial\sqlite-jdbc\3.50.3.0\sqlite-jdbc-3.50.3.0.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter\5.13.4\junit-jupiter-5.13.4.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.13.4\junit-jupiter-api-5.13.4.jar;C:\Users\abhin\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\abhin\.m2\repository\org\junit\platform\junit-platform-commons\1.13.4\junit-platform-commons-1.13.4.jar;C:\Users\abhin\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.13.4\junit-jupiter-params-5.13.4.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.13.4\junit-jupiter-engine-5.13.4.jar;C:\Users\abhin\.m2\repository\org\junit\platform\junit-platform-engine\1.13.4\junit-platform-engine-1.13.4.jar"/>
@@ -32,7 +32,7 @@
     <property name="line.separator" value="&#10;"/>
     <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
     <property name="java.specification.name" value="Java Platform API Specification"/>
-    <property name="surefire.real.class.path" value="C:\Users\abhin\AppData\Local\Temp\surefire9621588657256542296\surefirebooter-20261117022650943_3.jar"/>
+    <property name="surefire.real.class.path" value="C:\Users\abhin\AppData\Local\Temp\surefire1286578345765071917\surefirebooter-20261117023729246_3.jar"/>
     <property name="user.script" value=""/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="java.runtime.version" value="25.0.5+8-LTS"/>
@@ -62,21 +62,24 @@
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
     <property name="java.class.version" value="69.0"/>
   </properties>
-  <testcase name="realWindowsDashboardMonitoringTransfersAndShutdown" classname="com.netpulse.ui.DashboardDesktopTest" time="8.167">
+  <testcase name="realWindowsDashboardMonitoringTransfersAndShutdown" classname="com.netpulse.ui.DashboardDesktopTest" time="15.171">
     <system-out><![CDATA[NetPulse - Network Bandwidth Monitoring and Analysis System
 Application Started Successfully
-GUI ADAPTER VERIFIED: Wi-Fi [6] | receive=0.001724 Mbps | send=0.001957 Mbps | totals=620/704 bytes
+GUI ADAPTER VERIFIED: Wi-Fi [6] | receive=0.018381 Mbps | send=0.008994 Mbps | totals=6887/3370 bytes
+Real HTTP adapter traffic source returned status 200
+GUI GRAPHS VERIFIED: 4 distinct adapter readings; zero/absent readings are not fabricated.
 Server listening on 127.0.0.1:5001
-Client connected: /127.0.0.1:62079
+Client connected: /127.0.0.1:64408
 Starting UPLOAD: 10000000 bytes
 Completed UPLOAD: 10000000 bytes
-GUI TCP VERIFIED: UPLOAD | bytes=10000000 | elapsed=0.005605 s | 14272.971 Mbps
-Client connected: /127.0.0.1:62080
+GUI TCP VERIFIED: UPLOAD | bytes=10000000 | elapsed=0.005613 s | 14252.628 Mbps
+Client connected: /127.0.0.1:64410
 Starting DOWNLOAD: 10000000 bytes
 Completed DOWNLOAD: 10000000 bytes
-GUI TCP VERIFIED: DOWNLOAD | bytes=10000000 | elapsed=0.031533 s | 2537.041 Mbps
+GUI TCP VERIFIED: DOWNLOAD | bytes=10000000 | elapsed=0.026504 s | 3018.469 Mbps
 GUI screenshot: C:\Users\abhin\projects\NetPulse\target\netpulse-dashboard.png
-GUI VERIFIED: adapter selection, timer updates, unavailable adapter, TCP errors, both modes, and shutdown.
+GUI graph screenshot: C:\Users\abhin\projects\NetPulse\target\netpulse-graphs.png
+GUI VERIFIED: live graphs, graph freeze, resizing, adapter controls, TCP tests, and shutdown.
 ]]></system-out>
   </testcase>
 </testsuite>

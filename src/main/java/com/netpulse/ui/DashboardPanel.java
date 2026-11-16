@@ -3,6 +3,7 @@ package com.netpulse.ui;
 import com.netpulse.model.NetworkAdapter;
 import com.netpulse.model.NetworkStatisticsSnapshot;
 import com.netpulse.model.TransferResult;
+import com.netpulse.model.BandwidthGraphHistory;
 
 import javax.swing.*;
 import java.awt.*;
@@ -13,7 +14,10 @@ import java.util.OptionalDouble;
 import static com.netpulse.ui.DashboardStyle.*;
 
 /** Swing components and rendering only. Background work belongs to the controller. */
-public class DashboardPanel extends JPanel {
+public class DashboardPanel extends JPanel implements Scrollable {
+    final BandwidthGraphHistory graphHistory = new BandwidthGraphHistory();
+    final BandwidthGraphPanel downloadGraph = new BandwidthGraphPanel(graphHistory, true);
+    final BandwidthGraphPanel uploadGraph = new BandwidthGraphPanel(graphHistory, false);
     final JComboBox<NetworkAdapter> adapterSelector = new JComboBox<>();
     final JButton refreshAdaptersButton = button("Refresh adapters", false);
     final JButton startMonitoringButton = button("Start Monitoring", true);
@@ -85,6 +89,12 @@ public class DashboardPanel extends JPanel {
         notes.add(counterDetails);
         controls.add(notes, BorderLayout.CENTER);
         content.add(controls);
+        content.add(Box.createVerticalStrut(18));
+        JPanel graphs = new JPanel(new GridLayout(1, 2, 14, 0));
+        graphs.setMaximumSize(new Dimension(Integer.MAX_VALUE, 260));
+        graphs.add(downloadGraph);
+        graphs.add(uploadGraph);
+        content.add(graphs);
         content.add(Box.createVerticalStrut(22));
         content.add(tcpSection());
         add(content, BorderLayout.CENTER);
@@ -221,6 +231,8 @@ public class DashboardPanel extends JPanel {
     }
 
     void showSelection() {
+        graphHistory.clear();
+        repaintGraphs();
         displayedSnapshot = null;
         downloadValue.setText("--");
         uploadValue.setText("--");
@@ -276,11 +288,57 @@ public class DashboardPanel extends JPanel {
         testBytes.setText("-- bytes");
     }
 
+    void startGraphs() {
+        graphHistory.start();
+        repaintGraphs();
+    }
+
+    void stopGraphs() {
+        graphHistory.stop();
+        repaintGraphs();
+    }
+
+    void addGraphSnapshot(NetworkStatisticsSnapshot snapshot) {
+        if (graphHistory.addSnapshot(snapshot)) {
+            repaintGraphs();
+        }
+    }
+
+    void repaintGraphs() {
+        downloadGraph.repaint();
+        uploadGraph.repaint();
+    }
+
     static String rate(OptionalDouble value) {
         return value.isPresent() ? String.format(Locale.ROOT, "%.6f", value.getAsDouble()) : "--";
     }
 
     static String dataSize(long bytes) {
         return String.format(Locale.ROOT, "%.3f MB", bytes / 1_000_000.0);
+    }
+
+    @Override
+    public Dimension getPreferredScrollableViewportSize() {
+        return getPreferredSize();
+    }
+
+    @Override
+    public int getScrollableUnitIncrement(Rectangle visible, int orientation, int direction) {
+        return 18;
+    }
+
+    @Override
+    public int getScrollableBlockIncrement(Rectangle visible, int orientation, int direction) {
+        return Math.max(18, (orientation == SwingConstants.VERTICAL ? visible.height : visible.width) - 18);
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportWidth() {
+        return true;
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportHeight() {
+        return false;
     }
 }

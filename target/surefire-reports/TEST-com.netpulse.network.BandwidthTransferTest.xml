@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.netpulse.network.BandwidthTransferTest" time="0.172" tests="29" errors="0" skipped="0" failures="0" flakes="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.netpulse.network.BandwidthTransferTest" time="0.154" tests="29" errors="0" skipped="0" failures="0" flakes="0">
   <properties>
     <property name="java.specification.version" value="25"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -14,7 +14,7 @@
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="user.country" value="IN"/>
     <property name="sun.boot.library.path" value="C:\Program Files\Eclipse Adoptium\jdk-25.0.5.8-hotspot\bin"/>
-    <property name="sun.java.command" value="C:\Users\abhin\AppData\Local\Temp\surefire4574753374947577061\surefirebooter-20261117022642825_3.jar C:\Users\abhin\AppData\Local\Temp\surefire4574753374947577061 2026-11-17T02-26-42_733-jvmRun1 surefire-20261117022642825_1tmp surefire_0-20261117022642825_2tmp"/>
+    <property name="sun.java.command" value="C:\Users\abhin\AppData\Local\Temp\surefire10557885703138668340\surefirebooter-20261117023721837_3.jar C:\Users\abhin\AppData\Local\Temp\surefire10557885703138668340 2026-11-17T02-37-21_748-jvmRun1 surefire-20261117023721837_1tmp surefire_0-20261117023721837_2tmp"/>
     <property name="jdk.debug" value="release"/>
     <property name="surefire.test.class.path" value="C:\Users\abhin\projects\NetPulse\target\test-classes;C:\Users\abhin\projects\NetPulse\target\classes;C:\Users\abhin\.m2\repository\org\xerial\sqlite-jdbc\3.50.3.0\sqlite-jdbc-3.50.3.0.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter\5.13.4\junit-jupiter-5.13.4.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.13.4\junit-jupiter-api-5.13.4.jar;C:\Users\abhin\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\abhin\.m2\repository\org\junit\platform\junit-platform-commons\1.13.4\junit-platform-commons-1.13.4.jar;C:\Users\abhin\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.13.4\junit-jupiter-params-5.13.4.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.13.4\junit-jupiter-engine-5.13.4.jar;C:\Users\abhin\.m2\repository\org\junit\platform\junit-platform-engine\1.13.4\junit-platform-engine-1.13.4.jar"/>
     <property name="sun.cpu.endian" value="little"/>
@@ -29,7 +29,7 @@
     <property name="line.separator" value="&#10;"/>
     <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
     <property name="java.specification.name" value="Java Platform API Specification"/>
-    <property name="surefire.real.class.path" value="C:\Users\abhin\AppData\Local\Temp\surefire4574753374947577061\surefirebooter-20261117022642825_3.jar"/>
+    <property name="surefire.real.class.path" value="C:\Users\abhin\AppData\Local\Temp\surefire10557885703138668340\surefirebooter-20261117023721837_3.jar"/>
     <property name="user.script" value=""/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="java.runtime.version" value="25.0.5+8-LTS"/>
@@ -59,113 +59,114 @@
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
     <property name="java.class.version" value="69.0"/>
   </properties>
-  <testcase name="measurementCanBePolledDuringARealTransfer(String)[1]" classname="com.netpulse.network.BandwidthTransferTest" time="0.018">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61384
-Client connected: /127.0.0.1:61385
+  <testcase name="measurementCanBePolledDuringARealTransfer(String)[1]" classname="com.netpulse.network.BandwidthTransferTest" time="0.014">
+    <system-out><![CDATA[Server listening on 127.0.0.1:64333
+Client connected: /127.0.0.1:64334
 Starting UPLOAD: 1048699 bytes
 Completed UPLOAD: 1048699 bytes
 ]]></system-out>
   </testcase>
-  <testcase name="measurementCanBePolledDuringARealTransfer(String)[2]" classname="com.netpulse.network.BandwidthTransferTest" time="0.005">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61386
-Client connected: /127.0.0.1:61387
+  <testcase name="measurementCanBePolledDuringARealTransfer(String)[2]" classname="com.netpulse.network.BandwidthTransferTest" time="0.006">
+    <system-out><![CDATA[Server listening on 127.0.0.1:64335
+Client connected: /127.0.0.1:64336
 Starting DOWNLOAD: 1048699 bytes
 Completed DOWNLOAD: 1048699 bytes
 ]]></system-out>
   </testcase>
-  <testcase name="uploadTenMebibytes" classname="com.netpulse.network.BandwidthTransferTest" time="0.033">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61388
-Client connected: /127.0.0.1:61389
+  <testcase name="uploadTenMebibytes" classname="com.netpulse.network.BandwidthTransferTest" time="0.019">
+    <system-out><![CDATA[Server listening on 127.0.0.1:64337
+Client connected: /127.0.0.1:64338
 Starting UPLOAD: 10485760 bytes
 Completed UPLOAD: 10485760 bytes
 ]]></system-out>
   </testcase>
   <testcase name="clientCanConnectAndExchangeARequest" classname="com.netpulse.network.BandwidthTransferTest" time="0.003">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61391
-Client connected: /127.0.0.1:61392
+    <system-out><![CDATA[Server listening on 127.0.0.1:64339
+Client connected: /127.0.0.1:64340
 Starting DOWNLOAD: 1 bytes
-Completed DOWNLOAD: 1 bytes
 ]]></system-out>
+    <system-err><![CDATA[Client request failed: Socket closed
+]]></system-err>
   </testcase>
-  <testcase name="transfersExactByteCounts(String, long)[1]" classname="com.netpulse.network.BandwidthTransferTest" time="0.011">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61393
-Client connected: /127.0.0.1:61394
+  <testcase name="transfersExactByteCounts(String, long)[1]" classname="com.netpulse.network.BandwidthTransferTest" time="0.01">
+    <system-out><![CDATA[Server listening on 127.0.0.1:64341
+Client connected: /127.0.0.1:64342
 Starting UPLOAD: 1 bytes
 Completed UPLOAD: 1 bytes
 ]]></system-out>
   </testcase>
   <testcase name="transfersExactByteCounts(String, long)[2]" classname="com.netpulse.network.BandwidthTransferTest" time="0.003">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61395
-Client connected: /127.0.0.1:61396
+    <system-out><![CDATA[Server listening on 127.0.0.1:64343
+Client connected: /127.0.0.1:64344
 Starting UPLOAD: 65536 bytes
 Completed UPLOAD: 65536 bytes
 ]]></system-out>
   </testcase>
-  <testcase name="transfersExactByteCounts(String, long)[3]" classname="com.netpulse.network.BandwidthTransferTest" time="0.002">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61397
-Client connected: /127.0.0.1:61398
+  <testcase name="transfersExactByteCounts(String, long)[3]" classname="com.netpulse.network.BandwidthTransferTest" time="0.003">
+    <system-out><![CDATA[Server listening on 127.0.0.1:64345
+Client connected: /127.0.0.1:64346
 Starting UPLOAD: 65659 bytes
 Completed UPLOAD: 65659 bytes
 ]]></system-out>
   </testcase>
-  <testcase name="transfersExactByteCounts(String, long)[4]" classname="com.netpulse.network.BandwidthTransferTest" time="0.003">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61399
-Client connected: /127.0.0.1:61400
+  <testcase name="transfersExactByteCounts(String, long)[4]" classname="com.netpulse.network.BandwidthTransferTest" time="0.002">
+    <system-out><![CDATA[Server listening on 127.0.0.1:64347
+Client connected: /127.0.0.1:64348
 Starting DOWNLOAD: 1 bytes
 Completed DOWNLOAD: 1 bytes
 ]]></system-out>
   </testcase>
   <testcase name="transfersExactByteCounts(String, long)[5]" classname="com.netpulse.network.BandwidthTransferTest" time="0.003">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61401
-Client connected: /127.0.0.1:61402
+    <system-out><![CDATA[Server listening on 127.0.0.1:64349
+Client connected: /127.0.0.1:64350
 Starting DOWNLOAD: 65536 bytes
 Completed DOWNLOAD: 65536 bytes
 ]]></system-out>
   </testcase>
   <testcase name="transfersExactByteCounts(String, long)[6]" classname="com.netpulse.network.BandwidthTransferTest" time="0.003">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61403
-Client connected: /127.0.0.1:61404
+    <system-out><![CDATA[Server listening on 127.0.0.1:64351
+Client connected: /127.0.0.1:64352
 Starting DOWNLOAD: 65659 bytes
 Completed DOWNLOAD: 65659 bytes
 ]]></system-out>
   </testcase>
-  <testcase name="rejectsInvalidClientMode(String)[1]" classname="com.netpulse.network.BandwidthTransferTest" time="0.003">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61405
+  <testcase name="rejectsInvalidClientMode(String)[1]" classname="com.netpulse.network.BandwidthTransferTest" time="0.002">
+    <system-out><![CDATA[Server listening on 127.0.0.1:64353
 ]]></system-out>
   </testcase>
   <testcase name="rejectsInvalidClientMode(String)[2]" classname="com.netpulse.network.BandwidthTransferTest" time="0.001">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61406
+    <system-out><![CDATA[Server listening on 127.0.0.1:64354
 ]]></system-out>
   </testcase>
   <testcase name="rejectsInvalidClientMode(String)[3]" classname="com.netpulse.network.BandwidthTransferTest" time="0.001">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61407
+    <system-out><![CDATA[Server listening on 127.0.0.1:64355
 ]]></system-out>
   </testcase>
   <testcase name="rejectsInvalidClientMode(String)[4]" classname="com.netpulse.network.BandwidthTransferTest" time="0.001">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61408
+    <system-out><![CDATA[Server listening on 127.0.0.1:64356
 ]]></system-out>
   </testcase>
   <testcase name="rejectsInvalidClientSize(long)[1]" classname="com.netpulse.network.BandwidthTransferTest" time="0.003">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61409
+    <system-out><![CDATA[Server listening on 127.0.0.1:64357
 ]]></system-out>
   </testcase>
   <testcase name="rejectsInvalidClientSize(long)[2]" classname="com.netpulse.network.BandwidthTransferTest" time="0.001">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61410
+    <system-out><![CDATA[Server listening on 127.0.0.1:64358
 ]]></system-out>
   </testcase>
   <testcase name="rejectsInvalidClientSize(long)[3]" classname="com.netpulse.network.BandwidthTransferTest" time="0.001">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61411
+    <system-out><![CDATA[Server listening on 127.0.0.1:64359
 ]]></system-out>
   </testcase>
   <testcase name="rejectsInvalidClientSize(long)[4]" classname="com.netpulse.network.BandwidthTransferTest" time="0.001">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61412
+    <system-out><![CDATA[Server listening on 127.0.0.1:64360
 ]]></system-out>
   </testcase>
   <testcase name="serverRejectsShortAndOversizedUploads(int)[1]" classname="com.netpulse.network.BandwidthTransferTest" time="0.004">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61413
-Client connected: /127.0.0.1:61414
+    <system-out><![CDATA[Server listening on 127.0.0.1:64361
+Client connected: /127.0.0.1:64362
 Starting UPLOAD: 3 bytes
-Client connected: /127.0.0.1:61415
+Client connected: /127.0.0.1:64363
 Starting DOWNLOAD: 10 bytes
 Completed DOWNLOAD: 10 bytes
 ]]></system-out>
@@ -173,20 +174,20 @@ Completed DOWNLOAD: 10 bytes
 ]]></system-err>
   </testcase>
   <testcase name="serverRejectsShortAndOversizedUploads(int)[2]" classname="com.netpulse.network.BandwidthTransferTest" time="0.005">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61416
-Client connected: /127.0.0.1:61417
+    <system-out><![CDATA[Server listening on 127.0.0.1:64364
+Client connected: /127.0.0.1:64365
 Starting UPLOAD: 3 bytes
-Client connected: /127.0.0.1:61418
+Client connected: /127.0.0.1:64366
 Starting DOWNLOAD: 10 bytes
 Completed DOWNLOAD: 10 bytes
 ]]></system-out>
     <system-err><![CDATA[Client request failed: Received more than the requested 3 bytes.
 ]]></system-err>
   </testcase>
-  <testcase name="serverRejectsInvalidRequestsAndRemainsAvailable(String, long)[1]" classname="com.netpulse.network.BandwidthTransferTest" time="0.005">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61419
-Client connected: /127.0.0.1:61420
-Client connected: /127.0.0.1:61421
+  <testcase name="serverRejectsInvalidRequestsAndRemainsAvailable(String, long)[1]" classname="com.netpulse.network.BandwidthTransferTest" time="0.006">
+    <system-out><![CDATA[Server listening on 127.0.0.1:64367
+Client connected: /127.0.0.1:64368
+Client connected: /127.0.0.1:64369
 Starting UPLOAD: 10 bytes
 Completed UPLOAD: 10 bytes
 ]]></system-out>
@@ -194,9 +195,9 @@ Completed UPLOAD: 10 bytes
 ]]></system-err>
   </testcase>
   <testcase name="serverRejectsInvalidRequestsAndRemainsAvailable(String, long)[2]" classname="com.netpulse.network.BandwidthTransferTest" time="0.004">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61422
-Client connected: /127.0.0.1:61423
-Client connected: /127.0.0.1:61424
+    <system-out><![CDATA[Server listening on 127.0.0.1:64370
+Client connected: /127.0.0.1:64371
+Client connected: /127.0.0.1:64372
 Starting UPLOAD: 10 bytes
 Completed UPLOAD: 10 bytes
 ]]></system-out>
@@ -204,53 +205,53 @@ Completed UPLOAD: 10 bytes
 ]]></system-err>
   </testcase>
   <testcase name="serverRejectsInvalidRequestsAndRemainsAvailable(String, long)[3]" classname="com.netpulse.network.BandwidthTransferTest" time="0.005">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61425
-Client connected: /127.0.0.1:61426
-Client connected: /127.0.0.1:61427
+    <system-out><![CDATA[Server listening on 127.0.0.1:64373
+Client connected: /127.0.0.1:64374
+Client connected: /127.0.0.1:64375
 Starting UPLOAD: 10 bytes
 Completed UPLOAD: 10 bytes
 ]]></system-out>
     <system-err><![CDATA[Client request failed: Transfer size must be between 1 and 1073741824 bytes.
 ]]></system-err>
   </testcase>
-  <testcase name="serverRejectsInvalidRequestsAndRemainsAvailable(String, long)[4]" classname="com.netpulse.network.BandwidthTransferTest" time="0.003">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61428
-Client connected: /127.0.0.1:61429
-Client connected: /127.0.0.1:61430
+  <testcase name="serverRejectsInvalidRequestsAndRemainsAvailable(String, long)[4]" classname="com.netpulse.network.BandwidthTransferTest" time="0.004">
+    <system-out><![CDATA[Server listening on 127.0.0.1:64376
+Client connected: /127.0.0.1:64377
+Client connected: /127.0.0.1:64378
 Starting UPLOAD: 10 bytes
 Completed UPLOAD: 10 bytes
 ]]></system-out>
     <system-err><![CDATA[Client request failed: Transfer size must be between 1 and 1073741824 bytes.
 ]]></system-err>
   </testcase>
-  <testcase name="concurrentClientsCanUploadAndDownload" classname="com.netpulse.network.BandwidthTransferTest" time="0.004">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61431
-Client connected: /127.0.0.1:61433
-Client connected: /127.0.0.1:61432
-Starting DOWNLOAD: 1048699 bytes
+  <testcase name="concurrentClientsCanUploadAndDownload" classname="com.netpulse.network.BandwidthTransferTest" time="0.005">
+    <system-out><![CDATA[Server listening on 127.0.0.1:64379
+Client connected: /127.0.0.1:64380
 Starting UPLOAD: 1048699 bytes
-Completed DOWNLOAD: 1048699 bytes
+Client connected: /127.0.0.1:64381
+Starting DOWNLOAD: 1048699 bytes
 Completed UPLOAD: 1048699 bytes
+Completed DOWNLOAD: 1048699 bytes
 ]]></system-out>
   </testcase>
   <testcase name="measurementExpectedSizeMustMatchTheRequest" classname="com.netpulse.network.BandwidthTransferTest" time="0.002">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61434
+    <system-out><![CDATA[Server listening on 127.0.0.1:64382
 ]]></system-out>
   </testcase>
   <testcase name="serverUnavailableProducesAnIOException" classname="com.netpulse.network.BandwidthTransferTest" time="0.002">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61435
+    <system-out><![CDATA[Server listening on 127.0.0.1:64383
 ]]></system-out>
   </testcase>
   <testcase name="downloadTenMebibytes" classname="com.netpulse.network.BandwidthTransferTest" time="0.005">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61438
-Client connected: /127.0.0.1:61439
+    <system-out><![CDATA[Server listening on 127.0.0.1:64386
+Client connected: /127.0.0.1:64387
 Starting DOWNLOAD: 10485760 bytes
 Completed DOWNLOAD: 10485760 bytes
 ]]></system-out>
   </testcase>
   <testcase name="closingServerStopsAnUnfinishedTransfer" classname="com.netpulse.network.BandwidthTransferTest" time="0.003">
-    <system-out><![CDATA[Server listening on 127.0.0.1:61440
-Client connected: /127.0.0.1:61441
+    <system-out><![CDATA[Server listening on 127.0.0.1:64388
+Client connected: /127.0.0.1:64389
 Starting UPLOAD: 10 bytes
 ]]></system-out>
     <system-err><![CDATA[Client request failed: Socket closed

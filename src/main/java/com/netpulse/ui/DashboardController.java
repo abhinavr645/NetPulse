@@ -15,6 +15,7 @@ import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ScheduledExecutorService;
 
 /** Coordinates existing services; every Swing update runs on the EDT. */
 final class DashboardController {
@@ -24,6 +25,11 @@ final class DashboardController {
     private final ExecutorService tasks = Executors.newVirtualThreadPerTaskExecutor();
     private final Object monitorLock = new Object();
     private final Timer displayTimer;
+    private final ScheduledExecutorService graphCollector = Executors.newSingleThreadScheduledExecutor(
+            task -> new Thread(task, "netpulse-graph-collector"));
+    // These two fields belong only to the collector thread.
+    private NetworkAdapterMonitor graphMonitor;
+    private NetworkStatisticsSnapshot lastGraphSnapshot;
     private volatile NetworkAdapterMonitor monitor;
     private volatile boolean closing;
     private boolean adaptersBusy;
@@ -43,8 +49,12 @@ final class DashboardController {
         view.stopMonitoringButton.addActionListener(event -> stopMonitoring());
         view.refreshButton.addActionListener(event -> refreshSnapshot());
         view.startTestButton.addActionListener(event -> startTest());
-        displayTimer = new Timer(500, event -> refreshSnapshot());
+        displayTimer = new Timer(500, event -> {
+            refreshSnapshot();
+            view.repaintGraphs();
+        });
         displayTimer.start();
+        graphCollector.scheduleWithFixedDelay(this::collectGraphSample, 0, 200, TimeUnit.MILLISECONDS);
         refreshAdapters();
     }
 
@@ -84,6 +94,7 @@ final class DashboardController {
             return;
         }
         monitoringBusy = true;
+        view.startGraphs();
         view.monitoringStatus.setText("Starting...");
         view.monitorMessage.setText("Starting a new adapter monitoring session...");
         updateControls();
@@ -114,6 +125,7 @@ final class DashboardController {
                 }
                 onEdt(() -> {
                     monitoringBusy = false;
+                    view.stopGraphs();
                     view.monitoringStatus.setText("Stopped");
                     view.monitorMessage.setText("Could not start monitoring: " + exception.getMessage());
                     view.monitorMessage.setForeground(DashboardStyle.ERROR);
@@ -128,6 +140,7 @@ final class DashboardController {
             return;
         }
         monitoringBusy = true;
+        view.stopGraphs();
         view.monitoringStatus.setText("Stopping...");
         updateControls();
         tasks.submit(() -> {
@@ -157,6 +170,28 @@ final class DashboardController {
         if (!closing && active != null) {
             NetworkStatisticsSnapshot snapshot = active.getSnapshot();
             view.showSnapshot(snapshot);
+        }
+    }
+
+    private void collectGraphSample() {
+        NetworkAdapterMonitor active = monitor;
+        if (closing) {
+            return;
+        }
+        if (active != graphMonitor) {
+            graphMonitor = active;
+            lastGraphSnapshot = null;
+        }
+        if (active != null) {
+            NetworkStatisticsSnapshot snapshot = active.getSnapshot();
+            if (snapshot != lastGraphSnapshot) {
+                lastGraphSnapshot = snapshot;
+                onEdt(() -> {
+                    if (monitor == active && view.graphHistory.isRunning()) {
+                        view.addGraphSnapshot(snapshot);
+                    }
+                });
+            }
         }
     }
 
@@ -229,6 +264,7 @@ final class DashboardController {
         }
         closing = true;
         displayTimer.stop();
+        view.stopGraphs();
         updateControls();
         view.monitoringStatus.setText("Closing...");
         new Thread(() -> {
@@ -243,6 +279,7 @@ final class DashboardController {
     // Also safe for the JVM shutdown hook: this method never touches Swing components.
     void stopBackgroundWork() {
         closing = true;
+        graphCollector.shutdownNow();
         tasks.shutdownNow();
         NetworkAdapterMonitor active;
         synchronized (monitorLock) {
@@ -253,6 +290,9 @@ final class DashboardController {
             active.stop();
         }
         try {
+            if (!graphCollector.awaitTermination(3, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("Graph collector did not terminate.");
+            }
             if (!tasks.awaitTermination(8, TimeUnit.SECONDS)) {
                 throw new IllegalStateException("Dashboard background tasks did not terminate.");
             }

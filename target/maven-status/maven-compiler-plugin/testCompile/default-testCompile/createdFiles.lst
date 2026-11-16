@@ -1,12 +1,14 @@
 com\netpulse\ui\DashboardDesktopTest.class
 com\netpulse\monitoring\NetworkAdapterMonitorTest$2.class
 com\netpulse\monitoring\NetworkAdapterMonitorTest.class
-com\netpulse\monitoring\BandwidthMeasurementTest.class
 com\netpulse\monitoring\NetworkAdapterMonitorTest$1.class
-com\netpulse\ui\DashboardControllerTest.class
 com\netpulse\network\BandwidthTransferTest.class
 com\netpulse\ui\DashboardPanelTest.class
+com\netpulse\model\BandwidthGraphHistoryTest.class
 com\netpulse\monitoring\WindowsAdapterStatisticsTest.class
+com\netpulse\ui\BandwidthGraphPanelTest.class
+com\netpulse\network\BandwidthClientFailureTest.class
+com\netpulse\monitoring\BandwidthMeasurementTest.class
+com\netpulse\ui\DashboardControllerTest.class
 com\netpulse\network\BandwidthTransferTest$1.class
 com\netpulse\model\TransferResultTest.class
-com\netpulse\network\BandwidthClientFailureTest.class
