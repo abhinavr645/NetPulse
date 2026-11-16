@@ -1,0 +1,5 @@
+com\netpulse\network\BandwidthServer.class
+com\netpulse\model\TransferResult.class
+com\netpulse\network\BandwidthClient.class
+com\netpulse\network\TransferProtocol.class
+com\netpulse\Main.class
