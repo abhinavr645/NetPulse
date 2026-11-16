@@ -4,10 +4,10 @@ NetPulse is a college Computer Networks project for monitoring and analyzing
 network bandwidth. Future phases will add a Swing desktop interface and
 monitoring history stored in SQLite.
 
-Phase 3 adds a reusable measurement engine to the command-line TCP upload and
-download tests. It tracks payload bytes, elapsed time, current/average/peak
-throughput, and transfer progress. GUI and database operations are not
-implemented yet.
+Phase 4 adds real Windows network adapter monitoring alongside the existing TCP
+tests and bandwidth measurement engine. Adapter statistics and TCP payload
+measurements remain separate. GUI and database operations are not implemented
+yet.
 
 ## Technologies
 
@@ -19,6 +19,7 @@ implemented yet.
 - JUnit 5 for automated tests
 - Visual Studio Code
 - Windows 11
+- Windows PowerShell with the NetAdapter module for adapter statistics
 
 ## Project structure
 
@@ -31,9 +32,13 @@ src/main/java/com/netpulse/
         TransferProtocol.java
     monitoring/
         BandwidthMeasurement.java
+        NetworkAdapterMonitor.java
+        WindowsAdapterStatistics.java
     ui/
     model/
         BandwidthSnapshot.java
+        NetworkAdapter.java
+        NetworkStatisticsSnapshot.java
         TransferResult.java
     database/
     alerts/
@@ -216,6 +221,116 @@ Small transfers are especially affected by scheduling and acknowledgment time.
 This phase does not provide encryption, authentication, packet-loss analysis,
 payload integrity checks beyond TCP, or remote/LAN configuration.
 
+## Monitor a Windows network adapter
+
+List interfaces discovered by Java:
+
+```shell
+mvn exec:java "-Dexec.args=adapters"
+```
+
+Choose an interface index from the output. Prefer the active physical Wi-Fi or
+Ethernet adapter. Java can also list loopback, tunnels, and driver filter
+interfaces that Windows does not expose through `Get-NetAdapterStatistics`.
+Their readings will be marked unavailable rather than replaced with fake data.
+
+Monitor the selected index (replace `6` with the index on your computer):
+
+```shell
+mvn exec:java "-Dexec.args=monitor 6 4"
+```
+
+This prints four reading attempts, including the initial baseline, then stops
+automatically. Omit the last argument for five attempts; the allowed range is
+1 to 60. At least two successful readings are needed to calculate speed. Ctrl+C
+also stops monitoring and closes an active PowerShell process.
+
+The output includes the Windows adapter name and status, cumulative receive/send
+counters, independent receive/send speeds in Mbps and MB/s, and bytes observed
+during this monitoring session. A counter is not the same as a session total:
+Windows counters may have accumulated before NetPulse started.
+
+### Collection and calculations
+
+`NetworkAdapterMonitor.listAdapters()` uses Java's `NetworkInterface` API for
+interface indexes, names, descriptions, Up/Down state, and loopback detection.
+That standard API does not expose traffic-byte counters. The small
+`WindowsAdapterStatistics` helper therefore launches a fixed, noninteractive
+PowerShell command using `ProcessBuilder`:
+
+```powershell
+$adapter = Get-NetAdapter -InterfaceIndex <selected-index> -IncludeHidden
+$adapter | Get-NetAdapterStatistics
+```
+
+Only a validated numeric index enters the command. Adapter names are never
+inserted into shell code. The helper checks the process exit code, times out
+after five seconds, validates the returned index/GUID/counters, and rejects
+missing, negative, malformed, or out-of-range values. Names use UTF-8 and Base64
+in the small delimited response so spaces, Unicode, and delimiters are safe.
+No third-party dependency or PowerShell profile is required.
+
+The monitor runs one background scheduled worker, with a two-second delay
+between completed queries. PowerShell startup/query time adds overhead; actual
+intervals can be around three seconds or longer. Rates use the actual elapsed
+time between completed readings, measured with `System.nanoTime()`:
+
+```text
+received delta = current received counter - previous received counter
+sent delta     = current sent counter - previous sent counter
+receive MB/s   = received delta / elapsed seconds / 1,000,000
+send MB/s      = sent delta / elapsed seconds / 1,000,000
+Mbps           = MB/s * 8
+session total  = sum of valid observed deltas for that direction
+```
+
+### Snapshots, errors, and lifecycle
+
+`NetworkStatisticsSnapshot` is an immutable record. The latest snapshot is
+published through a `volatile` field; `getSnapshot()` returns immediately and
+does not launch PowerShell. Future dashboard code can poll it independently of
+the console. One `NetworkAdapterMonitor` instance represents one selected
+adapter and one session. Call `start()` and later `stop()` or `close()`. Create
+a new instance to restart or select another adapter.
+
+Snapshot states distinguish `STARTING`, `BASELINE`, `VALID`, `COUNTER_RESET`,
+`INVALID_INTERVAL`, `UNAVAILABLE`, and `STOPPED`. Speeds and counters use optional
+values, and the console prints `N/A` when they are unavailable. A valid interval
+with unchanged counters reports a measured zero speed.
+
+- The first valid reading establishes a baseline and does not include previous
+  adapter traffic in the session totals.
+- A decrease in either counter or a changed adapter GUID renews the baseline.
+  Existing session totals remain, but the reset interval is excluded.
+- Zero/backward elapsed time has no speed and retains the previous baseline.
+- Command failures, disconnected adapters, and invalid readings have no speed.
+  Recovery requires a new baseline, so unknown traffic during gaps is excluded.
+- Shutdown cancels scheduling, interrupts the worker, terminates an active
+  PowerShell query, and waits for the worker to stop. Final totals remain
+  readable; stopped snapshots have no current speed.
+
+If access is denied or the NetAdapter module is unavailable, the error is shown
+in the snapshot. The application does not automatically request administrator
+rights or change Windows settings.
+
+### Limitations and measurement meaning
+
+These are Windows adapter counters, including traffic from other applications.
+They are not NetPulse's own TCP test payload totals and do not measure available
+bandwidth capacity. Localhost tests generally do not traverse physical Wi-Fi or
+Ethernet adapters. Virtual/VPN interfaces can overlap other interfaces, so
+NetPulse monitors one selected adapter rather than summing every interface.
+
+PowerShell sampling is suitable for a college demonstration but adds process
+overhead and cannot capture short bursts accurately. Permissions, driver
+support, and interface availability affect readings. Query-completion timing is
+an approximation of when Windows collected its counters. Cumulative counters
+can reset, and session totals exclude intervals whose traffic cannot be
+measured safely. Counters beyond Java's signed `long` range are rejected.
+
+References: [Java 25 NetworkInterface API](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/net/NetworkInterface.html),
+[Microsoft Get-NetAdapterStatistics](https://learn.microsoft.com/en-us/powershell/module/netadapter/get-netadapterstatistics).
+
 ## Automated tests
 
 ```shell
@@ -230,3 +345,7 @@ concurrent clients, server shutdown, and throughput unit conversions.
 Measurement tests also cover zero/invalid elapsed time, empty and unknown-size
 measurements, weighted averages, sampled peaks, idle periods, progress limits,
 immutable snapshots, and polling statistics during real uploads/downloads.
+Adapter tests use sample counters and a controlled clock to verify independent
+receive/send rates, deltas, zero/backward time, resets, unavailable/disconnected
+adapters, recovery, parsing, and worker shutdown. Sample values are used only in
+tests; the production adapter monitor always reads Windows counters.
