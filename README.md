@@ -1,19 +1,19 @@
 # NetPulse - Network Bandwidth Monitoring and Analysis System
 
-NetPulse is a college Computer Networks project for monitoring and analyzing
-network bandwidth. Future phases will add a Swing desktop interface and
-monitoring history stored in SQLite.
+NetPulse is a college Computer Networks project with a Swing dashboard for
+network adapter monitoring and TCP bandwidth tests. Future phases will add
+real-time graphs and monitoring history stored in SQLite.
 
-Phase 4 adds real Windows network adapter monitoring alongside the existing TCP
-tests and bandwidth measurement engine. Adapter statistics and TCP payload
-measurements remain separate. GUI and database operations are not implemented
-yet.
+Phase 5 adds a dark-themed Java Swing dashboard for the existing Windows
+adapter monitor and TCP bandwidth tests. Adapter statistics and TCP payload
+measurements remain separate. Graphs, alerts, traffic analysis, and database
+operations are not implemented yet.
 
 ## Technologies
 
 - JDK 25
 - Maven
-- Java Swing for the future desktop interface
+- Java Swing for the desktop dashboard
 - TCP socket programming for upload and download tests
 - SQLite with JDBC for future history storage
 - JUnit 5 for automated tests
@@ -35,6 +35,10 @@ src/main/java/com/netpulse/
         NetworkAdapterMonitor.java
         WindowsAdapterStatistics.java
     ui/
+        DashboardFrame.java
+        DashboardPanel.java
+        DashboardController.java
+        DashboardStyle.java
     model/
         BandwidthSnapshot.java
         NetworkAdapter.java
@@ -87,6 +91,69 @@ Application Started Successfully
 
 Maven may also print build and download messages. The first build requires
 Internet access to download dependencies and plugins.
+
+## Open the Swing dashboard
+
+After compiling, launch the desktop application:
+
+```shell
+mvn exec:java "-Dexec.args=gui"
+```
+
+The existing no-argument startup command and all `server`, `client`, `adapters`,
+and `monitor` commands still work.
+
+The dashboard provides:
+
+- A dark theme, title/subtitle, and Running/Stopped monitoring indicator.
+- An adapter selector, adapter name/status, and adapter-list refresh.
+- Download/upload cards in Mbps, with MB/s details, plus session receive/send
+  totals and the underlying Windows cumulative counters.
+- Start Monitoring, Stop Monitoring, and Refresh controls. Stop monitoring
+  before changing adapters. Refresh displays the latest completed sample;
+  it does not launch an extra PowerShell query.
+- Independent TCP upload/download tests with size input in decimal MB and
+  final throughput, elapsed time, and exact transferred-byte count.
+- Inline error messages for unavailable adapters, PowerShell failures, invalid
+  transfer sizes, missing servers, and connection timeouts.
+
+To use the TCP section, start the existing server in a second terminal:
+
+```shell
+mvn exec:java "-Dexec.args=server"
+```
+
+Then select Upload or Download in the dashboard and click Start Test. The
+default GUI size of `10` MB means exactly 10,000,000 bytes. Fractional MB values
+are allowed when they represent whole bytes; the maximum is 1073.741824 MB
+(1 GiB). The GUI does not automatically start a server. If none is listening on
+`127.0.0.1:5001`, it reports a connection error and remains responsive.
+
+Dashboard responsibilities are separated:
+
+- `DashboardPanel` creates components and renders existing immutable models.
+- `DashboardController` calls `NetworkAdapterMonitor.listAdapters()`, creates
+  the selected monitor, and invokes the existing `BandwidthClient.transfer()`.
+  The server continues to use the existing `BandwidthServer` CLI command.
+- A 500 ms Swing timer reads the monitor's thread-safe snapshot getter. Actual
+  counter updates still follow the existing PowerShell sampling interval;
+  the GUI does not invent intermediate readings.
+- Background executor tasks handle adapter discovery, monitor lifecycle calls,
+  and TCP transfers. `SwingUtilities.invokeLater` delivers UI updates to the
+  Event Dispatch Thread. No socket or PowerShell work runs on that thread.
+- JDK 25 virtual threads allow cancellation to interrupt the existing socket
+  I/O without changing the TCP engine. Window closing stops the timer, cancels
+  background work, stops monitoring/PowerShell, and waits for cleanup on a
+  separate thread before disposing the window. A JVM shutdown hook also cleans
+  up owned background work. An externally started CLI server remains separate.
+
+The window can be resized and scrolled on smaller screens. Unavailable speeds
+display `--`; a measured zero displays `0.000000`. Totals describe valid observed
+traffic in the current monitoring session. TCP results are shown in their own
+section and are never substituted for adapter readings.
+
+Socket cancellation reference:
+[JDK 25 Socket API](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/net/Socket.html).
 
 ## Run TCP transfers
 
@@ -349,3 +416,21 @@ Adapter tests use sample counters and a controlled clock to verify independent
 receive/send rates, deltas, zero/backward time, resets, unavailable/disconnected
 adapters, recovery, parsing, and worker shutdown. Sample values are used only in
 tests; the production adapter monitor always reads Windows counters.
+
+GUI unit tests check size conversion, snapshot rendering, adapter selection,
+result display, Event Dispatch Thread responsiveness, and cancellation of a
+blocked TCP read. They do not open a window or require real PowerShell counters.
+
+An additional desktop test is opt-in because it opens a visible window, moves
+the mouse, reads real Windows counters, and temporarily starts a test server on
+port 5001. Close other NetPulse windows and stop any server on that port first.
+Run it on an interactive Windows desktop with an active adapter:
+
+```shell
+mvn test "-Dtest=DashboardDesktopTest" "-Dnetpulse.gui.smoke=true"
+```
+
+It verifies opening the dashboard, adapter refresh/selection, real live speeds,
+monitor start/stop, an unavailable adapter, a missing TCP server, both transfer
+modes, and closing with monitoring active. It saves an actual screenshot to
+`target/netpulse-dashboard.png`. Normal `mvn test` skips this one desktop test.

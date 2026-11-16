@@ -6,6 +6,9 @@ import com.netpulse.model.NetworkStatisticsSnapshot;
 import com.netpulse.monitoring.NetworkAdapterMonitor;
 import com.netpulse.network.BandwidthClient;
 import com.netpulse.network.BandwidthServer;
+import com.netpulse.ui.DashboardFrame;
+
+import javax.swing.SwingUtilities;
 
 import java.io.IOException;
 import java.util.Locale;
@@ -20,7 +23,9 @@ public class Main {
         if (args.length == 0) {
             return;
         }
-        if (args.length == 1 && args[0].equalsIgnoreCase("server")) {
+        if (args.length == 1 && args[0].equalsIgnoreCase("gui")) {
+            SwingUtilities.invokeLater(() -> new DashboardFrame().setVisible(true));
+        } else if (args.length == 1 && args[0].equalsIgnoreCase("server")) {
             runServer();
         } else if (args.length == 1 && args[0].equalsIgnoreCase("adapters")) {
             for (NetworkAdapter adapter : NetworkAdapterMonitor.listAdapters()) {
@@ -55,7 +60,7 @@ public class Main {
             }
         } else {
             throw new IllegalArgumentException(
-                    "Usage: server | client UPLOAD|DOWNLOAD <bytes> | adapters | monitor <index> [samples]");
+                    "Usage: gui | server | client UPLOAD|DOWNLOAD <bytes> | adapters | monitor <index> [samples]");
         }
     }
 

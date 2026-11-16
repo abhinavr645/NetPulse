@@ -4,3 +4,6 @@ C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\monitoring\NetworkAd
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\monitoring\WindowsAdapterStatisticsTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\network\BandwidthClientFailureTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\network\BandwidthTransferTest.java
+C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\DashboardControllerTest.java
+C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\DashboardDesktopTest.java
+C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\DashboardPanelTest.java
