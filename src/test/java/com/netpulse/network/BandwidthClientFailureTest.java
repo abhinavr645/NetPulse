@@ -1,5 +1,6 @@
 package com.netpulse.network;
 
+import com.netpulse.monitoring.BandwidthMeasurement;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -37,7 +38,10 @@ class BandwidthClientFailureTest {
                 return null;
             });
             BandwidthClient client = new BandwidthClient(listener.getLocalPort(), 1_000);
-            assertThrows(IOException.class, () -> client.transfer("DOWNLOAD", 5));
+            BandwidthMeasurement measurement = new BandwidthMeasurement(5);
+            assertThrows(IOException.class, () -> client.transfer("DOWNLOAD", 5, measurement));
+            // Only the requested payload is counted; an extra-byte probe is not payload.
+            assertEquals(Math.min(actualBytes, 5), measurement.getSnapshot().totalBytes());
             peer.get(3, TimeUnit.SECONDS);
         }
     }
@@ -87,7 +91,9 @@ class BandwidthClientFailureTest {
                 return null;
             });
             BandwidthClient client = new BandwidthClient(listener.getLocalPort(), 1_000);
-            assertThrows(IOException.class, () -> client.transfer("UPLOAD", 5));
+            BandwidthMeasurement measurement = new BandwidthMeasurement(5);
+            assertThrows(IOException.class, () -> client.transfer("UPLOAD", 5, measurement));
+            assertEquals(5, measurement.getSnapshot().totalBytes());
             peer.get(3, TimeUnit.SECONDS);
         }
     }

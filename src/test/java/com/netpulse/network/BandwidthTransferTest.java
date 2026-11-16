@@ -1,6 +1,8 @@
 package com.netpulse.network;
 
 import com.netpulse.model.TransferResult;
+import com.netpulse.model.BandwidthSnapshot;
+import com.netpulse.monitoring.BandwidthMeasurement;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +19,7 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.Executors;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -133,6 +136,58 @@ class BandwidthTransferTest {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"UPLOAD", "DOWNLOAD"})
+    void measurementCanBePolledDuringARealTransfer(String mode) throws Exception {
+        long size = 1_048_699;
+        CountDownLatch firstChunk = new CountDownLatch(1);
+        CountDownLatch continueTransfer = new CountDownLatch(1);
+        BandwidthMeasurement measurement = new BandwidthMeasurement(size) {
+            private boolean first = true;
+
+            @Override
+            public void recordBytes(long bytes) {
+                super.recordBytes(bytes);
+                if (first) {
+                    first = false;
+                    firstChunk.countDown();
+                    try {
+                        if (!continueTransfer.await(3, TimeUnit.SECONDS)) {
+                            throw new IllegalStateException("Test did not release the transfer.");
+                        }
+                    } catch (InterruptedException exception) {
+                        Thread.currentThread().interrupt();
+                        throw new IllegalStateException(exception);
+                    }
+                }
+            }
+        };
+
+        try (var worker = Executors.newSingleThreadExecutor()) {
+            var transfer = worker.submit(() -> client.transfer(mode, size, measurement));
+            try {
+                assertTrue(firstChunk.await(3, TimeUnit.SECONDS));
+                BandwidthSnapshot partial = measurement.getSnapshot();
+                assertTrue(partial.totalBytes() > 0);
+                assertTrue(partial.totalBytes() < size);
+                assertTrue(partial.progressPercent().orElseThrow() > 0);
+                assertTrue(partial.progressPercent().orElseThrow() < 100);
+            } finally {
+                continueTransfer.countDown();
+            }
+            TransferResult result = transfer.get(5, TimeUnit.SECONDS);
+            assertSuccessful(result, mode, size);
+            assertEquals(result.getMeasurement(), measurement.getSnapshot());
+        }
+    }
+
+    @Test
+    void measurementExpectedSizeMustMatchTheRequest() {
+        BandwidthMeasurement measurement = new BandwidthMeasurement(20);
+        assertThrows(IllegalArgumentException.class, () -> client.transfer("UPLOAD", 10, measurement));
+        assertEquals(0, measurement.getSnapshot().totalBytes());
+    }
+
     @Test
     void closingServerStopsAnUnfinishedTransfer() throws IOException {
         try (Socket socket = connect()) {
@@ -159,5 +214,15 @@ class BandwidthTransferTest {
         assertTrue(Double.isFinite(result.getThroughputMbps()));
         assertTrue(result.getThroughputMbps() > 0);
         assertEquals(result.getMegabytesPerSecond() * 8, result.getThroughputMbps(), 0.000001);
+        BandwidthSnapshot snapshot = result.getMeasurement();
+        assertEquals(size, snapshot.totalBytes());
+        assertEquals(size, snapshot.expectedBytes().orElseThrow());
+        assertEquals(result.getElapsedNanos(), snapshot.elapsedNanos());
+        assertEquals(result.getThroughputMbps(), snapshot.averageMbps());
+        assertEquals(100.0, snapshot.progressPercent().orElseThrow());
+        assertTrue(Double.isFinite(snapshot.currentMbps()));
+        assertTrue(snapshot.currentMbps() >= 0);
+        assertTrue(Double.isFinite(snapshot.peakMbps()));
+        assertTrue(snapshot.peakMbps() >= snapshot.currentMbps());
     }
 }

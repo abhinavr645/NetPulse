@@ -1,25 +1,22 @@
 package com.netpulse.model;
 
+import java.util.Objects;
+import java.util.OptionalLong;
+
 public final class TransferResult {
     private final String mode;
-    private final long totalBytes;
-    private final long elapsedNanos;
-    private final double throughputMbps;
-    private final double megabytesPerSecond;
+    private final BandwidthSnapshot measurement;
 
     public TransferResult(String mode, long totalBytes, long elapsedNanos) {
+        this(mode, completedMeasurement(totalBytes, elapsedNanos));
+    }
+
+    public TransferResult(String mode, BandwidthSnapshot measurement) {
         if (!"UPLOAD".equals(mode) && !"DOWNLOAD".equals(mode)) {
             throw new IllegalArgumentException("Transfer mode must be UPLOAD or DOWNLOAD.");
         }
-        if (totalBytes <= 0 || elapsedNanos <= 0) {
-            throw new IllegalArgumentException("Byte count and elapsed time must be positive.");
-        }
         this.mode = mode;
-        this.totalBytes = totalBytes;
-        this.elapsedNanos = elapsedNanos;
-        double seconds = elapsedNanos / 1_000_000_000.0;
-        this.megabytesPerSecond = totalBytes / seconds / 1_000_000.0;
-        this.throughputMbps = megabytesPerSecond * 8;
+        this.measurement = Objects.requireNonNull(measurement, "Measurement is required.");
     }
 
     public String getMode() {
@@ -27,22 +24,35 @@ public final class TransferResult {
     }
 
     public long getTotalBytes() {
-        return totalBytes;
+        return measurement.totalBytes();
     }
 
     public long getElapsedNanos() {
-        return elapsedNanos;
+        return measurement.elapsedNanos();
     }
 
     public double getElapsedSeconds() {
-        return elapsedNanos / 1_000_000_000.0;
+        return measurement.elapsedSeconds();
     }
 
     public double getThroughputMbps() {
-        return throughputMbps;
+        return measurement.averageMbps();
     }
 
     public double getMegabytesPerSecond() {
-        return megabytesPerSecond;
+        return measurement.averageMBps();
+    }
+
+    public BandwidthSnapshot getMeasurement() {
+        return measurement;
+    }
+
+    private static BandwidthSnapshot completedMeasurement(long bytes, long elapsedNanos) {
+        // Preserve the original constructor's validation and average-only result API.
+        if (bytes <= 0 || elapsedNanos <= 0) {
+            throw new IllegalArgumentException("Byte count and elapsed time must be positive.");
+        }
+        double rate = BandwidthSnapshot.bytesPerSecond(bytes, elapsedNanos);
+        return new BandwidthSnapshot(bytes, elapsedNanos, rate, rate, OptionalLong.of(bytes));
     }
 }

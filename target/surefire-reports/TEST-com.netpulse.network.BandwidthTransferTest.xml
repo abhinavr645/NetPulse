@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.netpulse.network.BandwidthTransferTest" time="0.185" tests="26" errors="0" skipped="0" failures="0" flakes="0">
+  <properties>
+    <property name="java.specification.version" value="25"/>
+    <property name="sun.cpu.isalist" value="amd64"/>
+    <property name="sun.jnu.encoding" value="Cp1252"/>
+    <property name="java.class.path" value="C:\Users\abhin\projects\NetPulse\target\test-classes;C:\Users\abhin\projects\NetPulse\target\classes;C:\Users\abhin\.m2\repository\org\xerial\sqlite-jdbc\3.50.3.0\sqlite-jdbc-3.50.3.0.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter\5.13.4\junit-jupiter-5.13.4.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.13.4\junit-jupiter-api-5.13.4.jar;C:\Users\abhin\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\abhin\.m2\repository\org\junit\platform\junit-platform-commons\1.13.4\junit-platform-commons-1.13.4.jar;C:\Users\abhin\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.13.4\junit-jupiter-params-5.13.4.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.13.4\junit-jupiter-engine-5.13.4.jar;C:\Users\abhin\.m2\repository\org\junit\platform\junit-platform-engine\1.13.4\junit-platform-engine-1.13.4.jar"/>
+    <property name="java.vm.vendor" value="Eclipse Adoptium"/>
+    <property name="sun.arch.data.model" value="64"/>
+    <property name="user.variant" value=""/>
+    <property name="java.vendor.url" value="https://adoptium.net/"/>
+    <property name="os.name" value="Windows 11"/>
+    <property name="java.vm.specification.version" value="25"/>
+    <property name="sun.java.launcher" value="SUN_STANDARD"/>
+    <property name="user.country" value="IN"/>
+    <property name="sun.boot.library.path" value="C:\Program Files\Eclipse Adoptium\jdk-25.0.5.8-hotspot\bin"/>
+    <property name="sun.java.command" value="C:\Users\abhin\AppData\Local\Temp\surefire773211108821345108\surefirebooter-20261117014523240_3.jar C:\Users\abhin\AppData\Local\Temp\surefire773211108821345108 2026-11-17T01-45-17_712-jvmRun1 surefire-20261117014523240_1tmp surefire_0-20261117014523240_2tmp"/>
+    <property name="jdk.debug" value="release"/>
+    <property name="surefire.test.class.path" value="C:\Users\abhin\projects\NetPulse\target\test-classes;C:\Users\abhin\projects\NetPulse\target\classes;C:\Users\abhin\.m2\repository\org\xerial\sqlite-jdbc\3.50.3.0\sqlite-jdbc-3.50.3.0.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter\5.13.4\junit-jupiter-5.13.4.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.13.4\junit-jupiter-api-5.13.4.jar;C:\Users\abhin\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\abhin\.m2\repository\org\junit\platform\junit-platform-commons\1.13.4\junit-platform-commons-1.13.4.jar;C:\Users\abhin\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.13.4\junit-jupiter-params-5.13.4.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.13.4\junit-jupiter-engine-5.13.4.jar;C:\Users\abhin\.m2\repository\org\junit\platform\junit-platform-engine\1.13.4\junit-platform-engine-1.13.4.jar"/>
+    <property name="sun.cpu.endian" value="little"/>
+    <property name="user.home" value="C:\Users\abhin"/>
+    <property name="user.language" value="en"/>
+    <property name="java.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.version.date" value="2026-10-20"/>
+    <property name="java.home" value="C:\Program Files\Eclipse Adoptium\jdk-25.0.5.8-hotspot"/>
+    <property name="file.separator" value="\"/>
+    <property name="basedir" value="C:\Users\abhin\projects\NetPulse"/>
+    <property name="java.vm.compressedOopsMode" value="Zero based"/>
+    <property name="line.separator" value="&#10;"/>
+    <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.specification.name" value="Java Platform API Specification"/>
+    <property name="surefire.real.class.path" value="C:\Users\abhin\AppData\Local\Temp\surefire773211108821345108\surefirebooter-20261117014523240_3.jar"/>
+    <property name="user.script" value=""/>
+    <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
+    <property name="java.runtime.version" value="25.0.5+8-LTS"/>
+    <property name="user.name" value="abhin"/>
+    <property name="stdout.encoding" value="Cp1252"/>
+    <property name="path.separator" value=";"/>
+    <property name="os.version" value="10.0"/>
+    <property name="java.runtime.name" value="OpenJDK Runtime Environment"/>
+    <property name="file.encoding" value="UTF-8"/>
+    <property name="java.vm.name" value="OpenJDK 64-Bit Server VM"/>
+    <property name="java.vendor.version" value="Temurin-25.0.5+8"/>
+    <property name="localRepository" value="C:\Users\abhin\.m2\repository"/>
+    <property name="java.vendor.url.bug" value="https://github.com/adoptium/adoptium-support/issues"/>
+    <property name="java.io.tmpdir" value="C:\Users\abhin\AppData\Local\Temp\"/>
+    <property name="java.version" value="25.0.5"/>
+    <property name="user.dir" value="C:\Users\abhin\projects\NetPulse"/>
+    <property name="os.arch" value="amd64"/>
+    <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
+    <property name="sun.os.patch.level" value=""/>
+    <property name="native.encoding" value="Cp1252"/>
+    <property name="java.library.path" value="C:\Program Files\Eclipse Adoptium\jdk-25.0.5.8-hotspot\bin;C:\WINDOWS\Sun\Java\bin;C:\WINDOWS\system32;C:\WINDOWS;C:\Users\abhin\.codex\tmp\arg0-windows\codex-arg0xpCkjU;C:\Program Files\Eclipse Adoptium\jdk-25.0.5.8-hotspot\bin;C:\Program Files\Python315\Scripts\;C:\Program Files\Python315\;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\dotnet\;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\NVIDIA Corporation\NVIDIA App\NvDLISR;C:\Program Files\apache-maven-3.10.1-bin\apache-maven-3.10.1\bin;C:\Users\abhin\AppData\Local\Microsoft\WindowsApps;C:\Users\abhin\AppData\Local\Programs\Microsoft VS Code\bin;C:\Program Files\Python315\python.exe;C:\Program Files\Python315;C:\Program Files\Python315\Scripts;C:\Users\abhin\AppData\Local\Programs\cursor\resources\app\bin;c:\Users\abhin\.cursor\extensions\openai.chatgpt-26.1111.21308-win32-x64\bin\windows-x86_64;."/>
+    <property name="java.vm.info" value="mixed mode, sharing"/>
+    <property name="stderr.encoding" value="Cp1252"/>
+    <property name="java.vendor" value="Eclipse Adoptium"/>
+    <property name="java.vm.version" value="25.0.5+8-LTS"/>
+    <property name="stdin.encoding" value="Cp1252"/>
+    <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
+    <property name="java.class.version" value="69.0"/>
+  </properties>
+  <testcase name="uploadTenMebibytes" classname="com.netpulse.network.BandwidthTransferTest" time="0.043">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54836
+Client connected: /127.0.0.1:54837
+Starting UPLOAD: 10485760 bytes
+Completed UPLOAD: 10485760 bytes
+]]></system-out>
+  </testcase>
+  <testcase name="clientCanConnectAndExchangeARequest" classname="com.netpulse.network.BandwidthTransferTest" time="0.006">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54838
+Client connected: /127.0.0.1:54839
+Starting DOWNLOAD: 1 bytes
+Completed DOWNLOAD: 1 bytes
+]]></system-out>
+  </testcase>
+  <testcase name="transfersExactByteCounts(String, long)[1]" classname="com.netpulse.network.BandwidthTransferTest" time="0.012">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54840
+Client connected: /127.0.0.1:54841
+Starting UPLOAD: 1 bytes
+Completed UPLOAD: 1 bytes
+]]></system-out>
+  </testcase>
+  <testcase name="transfersExactByteCounts(String, long)[2]" classname="com.netpulse.network.BandwidthTransferTest" time="0.004">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54842
+Client connected: /127.0.0.1:54843
+Starting UPLOAD: 65536 bytes
+Completed UPLOAD: 65536 bytes
+]]></system-out>
+  </testcase>
+  <testcase name="transfersExactByteCounts(String, long)[3]" classname="com.netpulse.network.BandwidthTransferTest" time="0.004">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54844
+Client connected: /127.0.0.1:54845
+Starting UPLOAD: 65659 bytes
+Completed UPLOAD: 65659 bytes
+]]></system-out>
+  </testcase>
+  <testcase name="transfersExactByteCounts(String, long)[4]" classname="com.netpulse.network.BandwidthTransferTest" time="0.004">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54846
+Client connected: /127.0.0.1:54847
+Starting DOWNLOAD: 1 bytes
+Completed DOWNLOAD: 1 bytes
+]]></system-out>
+  </testcase>
+  <testcase name="transfersExactByteCounts(String, long)[5]" classname="com.netpulse.network.BandwidthTransferTest" time="0.003">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54848
+Client connected: /127.0.0.1:54849
+Starting DOWNLOAD: 65536 bytes
+Completed DOWNLOAD: 65536 bytes
+]]></system-out>
+  </testcase>
+  <testcase name="transfersExactByteCounts(String, long)[6]" classname="com.netpulse.network.BandwidthTransferTest" time="0.004">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54850
+Client connected: /127.0.0.1:54851
+Starting DOWNLOAD: 65659 bytes
+Completed DOWNLOAD: 65659 bytes
+]]></system-out>
+  </testcase>
+  <testcase name="rejectsInvalidClientMode(String)[1]" classname="com.netpulse.network.BandwidthTransferTest" time="0.003">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54852
+]]></system-out>
+  </testcase>
+  <testcase name="rejectsInvalidClientMode(String)[2]" classname="com.netpulse.network.BandwidthTransferTest" time="0.002">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54853
+]]></system-out>
+  </testcase>
+  <testcase name="rejectsInvalidClientMode(String)[3]" classname="com.netpulse.network.BandwidthTransferTest" time="0.001">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54854
+]]></system-out>
+  </testcase>
+  <testcase name="rejectsInvalidClientMode(String)[4]" classname="com.netpulse.network.BandwidthTransferTest" time="0.002">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54855
+]]></system-out>
+  </testcase>
+  <testcase name="rejectsInvalidClientSize(long)[1]" classname="com.netpulse.network.BandwidthTransferTest" time="0.004">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54856
+]]></system-out>
+  </testcase>
+  <testcase name="rejectsInvalidClientSize(long)[2]" classname="com.netpulse.network.BandwidthTransferTest" time="0.002">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54857
+]]></system-out>
+  </testcase>
+  <testcase name="rejectsInvalidClientSize(long)[3]" classname="com.netpulse.network.BandwidthTransferTest" time="0.002">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54858
+]]></system-out>
+  </testcase>
+  <testcase name="rejectsInvalidClientSize(long)[4]" classname="com.netpulse.network.BandwidthTransferTest" time="0.002">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54859
+]]></system-out>
+  </testcase>
+  <testcase name="serverRejectsShortAndOversizedUploads(int)[1]" classname="com.netpulse.network.BandwidthTransferTest" time="0.005">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54860
+Client connected: /127.0.0.1:54861
+Starting UPLOAD: 3 bytes
+Client connected: /127.0.0.1:54862
+Starting DOWNLOAD: 10 bytes
+Completed DOWNLOAD: 10 bytes
+]]></system-out>
+    <system-err><![CDATA[Client request failed: Expected 3 bytes but received 2.
+]]></system-err>
+  </testcase>
+  <testcase name="serverRejectsShortAndOversizedUploads(int)[2]" classname="com.netpulse.network.BandwidthTransferTest" time="0.004">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54863
+Client connected: /127.0.0.1:54864
+Starting UPLOAD: 3 bytes
+Client connected: /127.0.0.1:54865
+Starting DOWNLOAD: 10 bytes
+Completed DOWNLOAD: 10 bytes
+]]></system-out>
+    <system-err><![CDATA[Client request failed: Received more than the requested 3 bytes.
+]]></system-err>
+  </testcase>
+  <testcase name="serverRejectsInvalidRequestsAndRemainsAvailable(String, long)[1]" classname="com.netpulse.network.BandwidthTransferTest" time="0.006">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54866
+Client connected: /127.0.0.1:54867
+Client connected: /127.0.0.1:54868
+Starting UPLOAD: 10 bytes
+Completed UPLOAD: 10 bytes
+]]></system-out>
+    <system-err><![CDATA[Client request failed: Transfer mode must be UPLOAD or DOWNLOAD.
+]]></system-err>
+  </testcase>
+  <testcase name="serverRejectsInvalidRequestsAndRemainsAvailable(String, long)[2]" classname="com.netpulse.network.BandwidthTransferTest" time="0.006">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54869
+Client connected: /127.0.0.1:54870
+Client connected: /127.0.0.1:54871
+Starting UPLOAD: 10 bytes
+Completed UPLOAD: 10 bytes
+]]></system-out>
+    <system-err><![CDATA[Client request failed: Transfer size must be between 1 and 1073741824 bytes.
+]]></system-err>
+  </testcase>
+  <testcase name="serverRejectsInvalidRequestsAndRemainsAvailable(String, long)[3]" classname="com.netpulse.network.BandwidthTransferTest" time="0.004">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54872
+Client connected: /127.0.0.1:54873
+Client connected: /127.0.0.1:54874
+Starting UPLOAD: 10 bytes
+Completed UPLOAD: 10 bytes
+]]></system-out>
+    <system-err><![CDATA[Client request failed: Transfer size must be between 1 and 1073741824 bytes.
+]]></system-err>
+  </testcase>
+  <testcase name="serverRejectsInvalidRequestsAndRemainsAvailable(String, long)[4]" classname="com.netpulse.network.BandwidthTransferTest" time="0.005">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54875
+Client connected: /127.0.0.1:54876
+Client connected: /127.0.0.1:54877
+Starting UPLOAD: 10 bytes
+Completed UPLOAD: 10 bytes
+]]></system-out>
+    <system-err><![CDATA[Client request failed: Transfer size must be between 1 and 1073741824 bytes.
+]]></system-err>
+  </testcase>
+  <testcase name="concurrentClientsCanUploadAndDownload" classname="com.netpulse.network.BandwidthTransferTest" time="0.005">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54878
+Client connected: /127.0.0.1:54880
+Client connected: /127.0.0.1:54879
+Starting UPLOAD: 1048699 bytes
+Starting DOWNLOAD: 1048699 bytes
+Completed UPLOAD: 1048699 bytes
+Completed DOWNLOAD: 1048699 bytes
+]]></system-out>
+  </testcase>
+  <testcase name="serverUnavailableProducesAnIOException" classname="com.netpulse.network.BandwidthTransferTest" time="0.002">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54881
+]]></system-out>
+  </testcase>
+  <testcase name="downloadTenMebibytes" classname="com.netpulse.network.BandwidthTransferTest" time="0.006">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54884
+Client connected: /127.0.0.1:54885
+Starting DOWNLOAD: 10485760 bytes
+Completed DOWNLOAD: 10485760 bytes
+]]></system-out>
+  </testcase>
+  <testcase name="closingServerStopsAnUnfinishedTransfer" classname="com.netpulse.network.BandwidthTransferTest" time="0.003">
+    <system-out><![CDATA[Server listening on 127.0.0.1:54886
+Client connected: /127.0.0.1:54887
+Starting UPLOAD: 10 bytes
+]]></system-out>
+    <system-err><![CDATA[Client request failed: Socket closed
+]]></system-err>
+  </testcase>
+</testsuite>

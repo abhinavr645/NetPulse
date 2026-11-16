@@ -1,0 +1,3 @@
+com\netpulse\model\TransferResultTest.class
+com\netpulse\network\BandwidthClientFailureTest.class
+com\netpulse\network\BandwidthTransferTest.class

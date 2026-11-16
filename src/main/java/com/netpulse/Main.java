@@ -28,9 +28,14 @@ public class Main {
                 TransferResult result = new BandwidthClient().transfer(args[1], size);
                 System.out.printf(Locale.ROOT,
                         "Mode: %s%nTotal bytes transferred: %d%nElapsed time: %.6f seconds%n"
-                                + "Throughput: %.3f Mbps%nTransfer speed: %.3f MB/s%n",
+                                + "Throughput (average): %.3f Mbps%nTransfer speed (average): %.3f MB/s%n"
+                                + "Current throughput: %.3f Mbps (%.3f MB/s)%n"
+                                + "Peak throughput: %.3f Mbps (%.3f MB/s)%nProgress: %.2f%%%n",
                         result.getMode(), result.getTotalBytes(), result.getElapsedSeconds(),
-                        result.getThroughputMbps(), result.getMegabytesPerSecond());
+                        result.getThroughputMbps(), result.getMegabytesPerSecond(),
+                        result.getMeasurement().currentMbps(), result.getMeasurement().currentMBps(),
+                        result.getMeasurement().peakMbps(), result.getMeasurement().peakMBps(),
+                        result.getMeasurement().progressPercent().orElseThrow());
             } catch (IOException exception) {
                 System.err.println("Transfer failed: " + exception.getMessage());
                 throw exception;

@@ -1,12 +1,15 @@
 package com.netpulse.network;
 
 import com.netpulse.model.TransferResult;
+import com.netpulse.model.BandwidthSnapshot;
+import com.netpulse.monitoring.BandwidthMeasurement;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -30,9 +33,20 @@ public class BandwidthClient {
     }
 
     public TransferResult transfer(String mode, long size) throws IOException {
+        return transfer(mode, size, new BandwidthMeasurement(size));
+    }
+
+    // The caller can poll measurement.getSnapshot() from another thread during this call.
+    public TransferResult transfer(String mode, long size, BandwidthMeasurement measurement) throws IOException {
         String operation = TransferProtocol.validateRequest(mode, size);
+        Objects.requireNonNull(measurement, "Measurement is required.");
+        if (measurement.getSnapshot().expectedBytes().isPresent()
+                && measurement.getSnapshot().expectedBytes().getAsLong() != size) {
+            throw new IllegalArgumentException("Measurement expected size must match the request.");
+        }
         ScheduledExecutorService deadline = Executors.newSingleThreadScheduledExecutor();
         ScheduledFuture<?> timeout = null;
+        boolean measurementStarted = false;
 
         try (Socket socket = new Socket()) {
             // SO_TIMEOUT limits reads; closing the socket also stops a blocked write.
@@ -53,10 +67,11 @@ public class BandwidthClient {
                 throw new IOException("Server rejected the request: " + response);
             }
 
-            long start = System.nanoTime();
+            measurement.start();
+            measurementStarted = true;
             long transferred;
             if (operation.equals("UPLOAD")) {
-                TransferProtocol.sendBytes(output, size);
+                TransferProtocol.sendBytes(output, size, measurement::recordBytes);
                 socket.shutdownOutput();
                 String status = input.readUTF();
                 if (!status.equals("COMPLETE")) {
@@ -67,13 +82,19 @@ public class BandwidthClient {
                     throw new IOException("Server confirmed an incorrect byte count: " + transferred);
                 }
             } else {
-                transferred = TransferProtocol.receiveBytes(input, size);
+                transferred = TransferProtocol.receiveBytes(input, size, measurement::recordBytes);
                 output.writeLong(transferred);
                 output.flush();
             }
-            long elapsed = Math.max(1, System.nanoTime() - start);
-            return new TransferResult(operation, transferred, elapsed);
+            BandwidthSnapshot snapshot = measurement.finish();
+            if (snapshot.totalBytes() != transferred) {
+                throw new IOException("Measured payload count does not match the verified transfer.");
+            }
+            return new TransferResult(operation, snapshot);
         } finally {
+            if (measurementStarted) {
+                measurement.finish(); // Freeze partial statistics on failure; no result is returned.
+            }
             if (timeout != null) {
                 timeout.cancel(false);
             }

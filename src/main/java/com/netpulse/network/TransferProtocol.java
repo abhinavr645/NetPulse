@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Locale;
+import java.util.function.LongConsumer;
 
 // Shared constants and byte-transfer helpers for the client and server.
 final class TransferProtocol {
@@ -35,18 +36,27 @@ final class TransferProtocol {
     }
 
     static long sendBytes(OutputStream output, long size) throws IOException {
+        return sendBytes(output, size, count -> { });
+    }
+
+    static long sendBytes(OutputStream output, long size, LongConsumer payloadCounter) throws IOException {
         byte[] buffer = new byte[BUFFER_SIZE];
         long sent = 0;
         while (sent < size) {
             int count = (int) Math.min(buffer.length, size - sent);
             output.write(buffer, 0, count);
             sent += count;
+            payloadCounter.accept(count);
         }
         output.flush();
         return sent;
     }
 
     static long receiveBytes(InputStream input, long size) throws IOException {
+        return receiveBytes(input, size, count -> { });
+    }
+
+    static long receiveBytes(InputStream input, long size, LongConsumer payloadCounter) throws IOException {
         byte[] buffer = new byte[BUFFER_SIZE];
         long received = 0;
         while (received < size) {
@@ -55,6 +65,7 @@ final class TransferProtocol {
                 throw new EOFException("Expected " + size + " bytes but received " + received + ".");
             }
             received += count;
+            payloadCounter.accept(count);
         }
         // The sender half-closes its output after the payload. This also detects extra bytes.
         if (input.read() != -1) {
