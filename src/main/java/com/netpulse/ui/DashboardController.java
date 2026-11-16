@@ -8,9 +8,12 @@ import com.netpulse.model.TrafficAlert;
 import com.netpulse.monitoring.NetworkAdapterMonitor;
 import com.netpulse.monitoring.TrafficAnalyzer;
 import com.netpulse.network.BandwidthClient;
+import com.netpulse.database.DatabaseManager;
+import com.netpulse.database.PersistenceService;
 
 import javax.swing.*;
 import java.math.BigDecimal;
+import java.nio.file.Path;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.List;
@@ -25,6 +28,10 @@ final class DashboardController {
     private final DashboardPanel view;
     private final BandwidthClient client;
     private final TrafficAnalyzer analyzer = new TrafficAnalyzer();
+    private final PersistenceService persistence;
+    private boolean storageLoading = true;
+    private volatile boolean clearingAlerts;
+    HistoryDialog historyDialog;
     private AlertSettings appliedAlertSettings = AlertSettings.defaults();
     private volatile boolean alertMonitoringActive;
     private boolean alertSettingsBusy;
@@ -48,8 +55,16 @@ final class DashboardController {
     }
 
     DashboardController(DashboardPanel view, BandwidthClient client) {
+        this(view, client, DatabaseManager.defaultPath());
+    }
+
+    DashboardController(DashboardPanel view, BandwidthClient client, Path databasePath) {
         this.view = view;
         this.client = client;
+        persistence = new PersistenceService(databasePath, (available, message) -> onEdt(() -> {
+            view.storageStatus.setText(message);
+            view.storageStatus.setForeground(available ? DashboardStyle.MUTED : DashboardStyle.ERROR);
+        }));
         view.refreshAdaptersButton.addActionListener(event -> refreshAdapters());
         view.adapterSelector.addActionListener(event -> view.showSelection());
         view.startMonitoringButton.addActionListener(event -> startMonitoring());
@@ -59,6 +74,7 @@ final class DashboardController {
         view.alerts.applyButton.addActionListener(event -> applyAlertSettings());
         view.alerts.enabled.addActionListener(event -> applyAlertSettings());
         view.alerts.clearButton.addActionListener(event -> clearAlertHistory());
+        view.viewHistoryButton.addActionListener(event -> openHistory());
         displayTimer = new Timer(500, event -> {
             refreshSnapshot();
             view.repaintGraphs();
@@ -66,6 +82,17 @@ final class DashboardController {
         displayTimer.start();
         graphCollector.scheduleWithFixedDelay(this::collectGraphSample, 0, 200, TimeUnit.MILLISECONDS);
         refreshAdapters();
+        persistence.initialize(data -> onCollector(() -> {
+            analyzer.configure(data.settings());
+            analyzer.restoreHistory(data.alerts());
+            onEdt(() -> {
+                appliedAlertSettings = data.settings();
+                view.alerts.loadSettings(data.settings());
+                view.alerts.showHistory(data.alerts());
+                storageLoading = false;
+                updateControls();
+            });
+        }));
     }
 
     private void refreshAdapters() {
@@ -164,6 +191,7 @@ final class DashboardController {
             }
             try {
                 stopped.stop();
+                persistence.flush();
                 onEdt(() -> view.showSnapshot(stopped.getSnapshot()));
             } catch (Exception exception) {
                 onEdt(() -> view.monitorMessage.setText("Could not stop monitoring: " + exception.getMessage()));
@@ -195,14 +223,17 @@ final class DashboardController {
             graphMonitor = active;
             lastGraphSnapshot = null;
             analyzer.resetSession();
+            persistence.beginSession();
         }
         if (active != null) {
             NetworkStatisticsSnapshot snapshot = active.getSnapshot();
             if (snapshot != lastGraphSnapshot) {
                 lastGraphSnapshot = snapshot;
-                if (alertMonitoringActive && monitor == active) {
+                persistence.recordSnapshot(snapshot);
+                if (alertMonitoringActive && !clearingAlerts && monitor == active) {
                     List<TrafficAlert> generated = analyzer.analyze(snapshot);
                     if (!generated.isEmpty()) {
+                        persistence.saveAlerts(generated);
                         List<TrafficAlert> history = analyzer.getHistory();
                         onEdt(() -> view.alerts.showHistory(history));
                     }
@@ -275,6 +306,7 @@ final class DashboardController {
         updateControls();
         graphCollector.execute(() -> {
             analyzer.configure(settings);
+            persistence.saveSettings(settings);
             onEdt(() -> {
                 appliedAlertSettings = settings;
                 alertSettingsBusy = false;
@@ -285,12 +317,63 @@ final class DashboardController {
     }
 
     private void clearAlertHistory() {
-        if (!closing) {
+        if (!closing && !clearingAlerts && JOptionPane.showConfirmDialog(view,
+                "Clear recent alerts and permanently delete all saved alerts?", "Clear alert history",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.OK_OPTION) {
+            clearingAlerts = true;
+            updateControls();
             graphCollector.execute(() -> {
-                analyzer.clearHistory();
-                onEdt(() -> view.alerts.showHistory(List.of()));
+                persistence.clearAlerts(success -> onCollector(() -> {
+                    if (success) {
+                        analyzer.clearHistory();
+                    }
+                    clearingAlerts = false;
+                    onEdt(() -> {
+                        if (success) {
+                            view.alerts.showHistory(List.of());
+                        }
+                        updateControls();
+                    });
+                }));
             });
         }
+    }
+
+    private void onCollector(Runnable action) {
+        if (!closing) {
+            try {
+                graphCollector.execute(action);
+            } catch (java.util.concurrent.RejectedExecutionException exception) {
+                if (!closing) {
+                    throw exception;
+                }
+            }
+        }
+    }
+
+    private void openHistory() {
+        if (historyDialog == null) {
+            historyDialog = new HistoryDialog(SwingUtilities.getWindowAncestor(view));
+            historyDialog.refreshButton.addActionListener(event -> refreshSavedHistory());
+            historyDialog.range.addActionListener(event -> refreshSavedHistory());
+        }
+        historyDialog.setVisible(true);
+        historyDialog.toFront();
+        refreshSavedHistory();
+    }
+
+    private void refreshSavedHistory() {
+        historyDialog.refreshButton.setEnabled(false);
+        historyDialog.range.setEnabled(false);
+        historyDialog.status.setText("Loading saved history...");
+        persistence.loadHistory(historyDialog.from(), data -> onEdt(() -> {
+            historyDialog.showHistory(data);
+            historyDialog.range.setEnabled(true);
+        }), () -> onEdt(() -> {
+            historyDialog.status.setText("Could not load history. Check storage status and refresh to retry.");
+            historyDialog.refreshButton.setEnabled(true);
+            historyDialog.range.setEnabled(true);
+        }));
     }
 
     private void showTestError(String message) {
@@ -302,18 +385,19 @@ final class DashboardController {
         boolean canChoose = !closing && !adaptersBusy && !monitoringBusy && monitor == null;
         view.adapterSelector.setEnabled(canChoose);
         view.refreshAdaptersButton.setEnabled(canChoose);
-        view.startMonitoringButton.setEnabled(canChoose && view.adapterSelector.getSelectedItem() != null);
+        view.startMonitoringButton.setEnabled(canChoose && !storageLoading && view.adapterSelector.getSelectedItem() != null);
         view.stopMonitoringButton.setEnabled(!closing && !monitoringBusy && monitor != null);
         view.refreshButton.setEnabled(!closing && !monitoringBusy && monitor != null);
         view.startTestButton.setEnabled(!closing && !testBusy);
         view.transferMode.setEnabled(!closing && !testBusy);
         view.transferSize.setEnabled(!closing && !testBusy);
-        view.alerts.enabled.setEnabled(!closing && !alertSettingsBusy);
-        view.alerts.applyButton.setEnabled(!closing && !alertSettingsBusy);
-        view.alerts.downloadThreshold.setEnabled(!closing && !alertSettingsBusy);
-        view.alerts.uploadThreshold.setEnabled(!closing && !alertSettingsBusy);
-        view.alerts.inactivityDuration.setEnabled(!closing && !alertSettingsBusy);
-        view.alerts.clearButton.setEnabled(!closing);
+        view.alerts.enabled.setEnabled(!closing && !storageLoading && !alertSettingsBusy);
+        view.alerts.applyButton.setEnabled(!closing && !storageLoading && !alertSettingsBusy);
+        view.alerts.downloadThreshold.setEnabled(!closing && !storageLoading && !alertSettingsBusy);
+        view.alerts.uploadThreshold.setEnabled(!closing && !storageLoading && !alertSettingsBusy);
+        view.alerts.inactivityDuration.setEnabled(!closing && !storageLoading && !alertSettingsBusy);
+        view.alerts.clearButton.setEnabled(!closing && !storageLoading && !clearingAlerts);
+        view.viewHistoryButton.setEnabled(!closing && !storageLoading);
     }
 
     private void onEdt(Runnable update) {
@@ -331,6 +415,9 @@ final class DashboardController {
         closing = true;
         alertMonitoringActive = false;
         displayTimer.stop();
+        if (historyDialog != null) {
+            historyDialog.dispose();
+        }
         view.stopGraphs();
         updateControls();
         view.monitoringStatus.setText("Closing...");
@@ -366,6 +453,8 @@ final class DashboardController {
             }
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
+        } finally {
+            persistence.close();
         }
     }
 

@@ -4,6 +4,9 @@ import com.netpulse.Main;
 import com.netpulse.model.NetworkStatisticsSnapshot;
 import com.netpulse.model.TrafficAlert;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
@@ -26,6 +29,21 @@ import static org.junit.jupiter.api.Assertions.*;
 @EnabledIfSystemProperty(named = "netpulse.gui.smoke", matches = "true")
 @Timeout(90)
 class TrafficAlertsDesktopTest {
+    @TempDir Path databaseDirectory;
+    private String previousPath;
+
+    @BeforeEach
+    void useTemporaryDatabase() {
+        previousPath = System.getProperty("netpulse.database.path");
+        System.setProperty("netpulse.database.path", databaseDirectory.resolve("netpulse.db").toString());
+    }
+
+    @AfterEach
+    void restoreDatabasePath() {
+        if (previousPath == null) System.clearProperty("netpulse.database.path");
+        else System.setProperty("netpulse.database.path", previousPath);
+    }
+
     @Test
     void realAdapterThresholdControlsSuppressionDisableClearAndShutdown() throws Exception {
         assertFalse(GraphicsEnvironment.isHeadless());
@@ -91,6 +109,9 @@ class TrafficAlertsDesktopTest {
             System.out.println("GUI alert screenshot: " + screenshot.toAbsolutePath());
 
             click(robot, panel.alerts.clearButton);
+            robot.keyPress(java.awt.event.KeyEvent.VK_ENTER);
+            robot.keyRelease(java.awt.event.KeyEvent.VK_ENTER);
+            robot.waitForIdle();
             await(() -> panel.alerts.displayedAlerts.isEmpty(), 3_000, "History was not cleared.");
             // Disabling remains possible even if a draft field has become invalid.
             SwingUtilities.invokeAndWait(() -> panel.alerts.downloadThreshold.setText("invalid draft"));
@@ -143,9 +164,12 @@ class TrafficAlertsDesktopTest {
         SwingUtilities.invokeAndWait(() -> component.scrollRectToVisible(
                 new Rectangle(0, 0, component.getWidth(), component.getHeight())));
         robot.waitForIdle();
-        if (component instanceof JCheckBox checkbox) {
-            // Invoke Swing's normal action deterministically during checkbox automation.
-            SwingUtilities.invokeAndWait(() -> checkbox.doClick(0));
+        if (component instanceof AbstractButton button && !button.getText().equals("Clear history")) {
+            // Swing actions avoid native pointer/scroll timing during desktop automation.
+            SwingUtilities.invokeAndWait(() -> {
+                assertTrue(button.isEnabled());
+                button.doClick(0);
+            });
             robot.waitForIdle();
             return;
         }

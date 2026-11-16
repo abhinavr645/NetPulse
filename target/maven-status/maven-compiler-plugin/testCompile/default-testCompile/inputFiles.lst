@@ -1,3 +1,5 @@
+C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\database\DatabaseRepositoryTest.java
+C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\database\PersistenceServiceTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\model\BandwidthGraphHistoryTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\model\TransferResultTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\monitoring\BandwidthMeasurementTest.java
@@ -11,4 +13,5 @@ C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\BandwidthGraphPan
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\DashboardControllerTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\DashboardDesktopTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\DashboardPanelTest.java
+C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\PersistenceDesktopTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\TrafficAlertsDesktopTest.java

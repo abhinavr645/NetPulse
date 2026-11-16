@@ -16,6 +16,8 @@ import static com.netpulse.ui.DashboardStyle.*;
 /** Swing components and rendering only. Background work belongs to the controller. */
 public class DashboardPanel extends JPanel implements Scrollable {
     final AlertPanel alerts = new AlertPanel();
+    final JButton viewHistoryButton = button("View saved history", false);
+    final JTextArea storageStatus = messageArea("Opening local history...");
     final BandwidthGraphHistory graphHistory = new BandwidthGraphHistory();
     final BandwidthGraphPanel downloadGraph = new BandwidthGraphPanel(graphHistory, true);
     final BandwidthGraphPanel uploadGraph = new BandwidthGraphPanel(graphHistory, false);
@@ -100,6 +102,11 @@ public class DashboardPanel extends JPanel implements Scrollable {
         content.add(tcpSection());
         content.add(Box.createVerticalStrut(18));
         content.add(alerts);
+        content.add(Box.createVerticalStrut(18));
+        JPanel storage = section();
+        storage.add(viewHistoryButton, BorderLayout.NORTH);
+        storage.add(storageStatus, BorderLayout.CENTER);
+        content.add(storage);
         add(content, BorderLayout.CENTER);
         add(label("LOCALHOST TCP TESTS  /  WINDOWS ADAPTER MONITORING", 11, MUTED), BorderLayout.SOUTH);
 

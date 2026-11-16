@@ -1,13 +1,12 @@
 # NetPulse - Network Bandwidth Monitoring and Analysis System
 
 NetPulse is a college Computer Networks project with a Swing dashboard for
-network adapter monitoring, real-time bandwidth graphs, and TCP bandwidth tests.
-Future phases will add monitoring history stored in SQLite.
+network adapter monitoring, real-time bandwidth graphs, TCP bandwidth tests,
+and monitoring history stored in SQLite.
 
-Phase 7 adds simple adapter-traffic analysis and bounded in-app alert history.
-The dashboard includes live download/upload graphs and TCP bandwidth tests.
-Adapter statistics and TCP payload measurements remain separate. Database
-operations and persistent alert history are not implemented yet.
+Phase 8 adds SQLite monitoring history, daily observed-traffic summaries,
+persistent alerts and saved alert settings, plus a dashboard history viewer.
+Adapter statistics and TCP payload measurements remain separate.
 
 ## Technologies
 
@@ -15,7 +14,7 @@ operations and persistent alert history are not implemented yet.
 - Maven
 - Java Swing for the desktop dashboard
 - TCP socket programming for upload and download tests
-- SQLite with JDBC for future history storage
+- SQLite with JDBC for local history storage
 - JUnit 5 for automated tests
 - Visual Studio Code
 - Windows 11
@@ -42,6 +41,7 @@ src/main/java/com/netpulse/
         DashboardStyle.java
         BandwidthGraphPanel.java
         AlertPanel.java
+        HistoryDialog.java
     model/
         BandwidthSnapshot.java
         BandwidthGraphHistory.java
@@ -51,10 +51,16 @@ src/main/java/com/netpulse/
         TrafficAlert.java
         TransferResult.java
     database/
+        DatabaseManager.java
+        NetworkHistoryRepository.java
+        AlertRepository.java
+        AlertSettingsRepository.java
+        TrafficSummaryRepository.java
+        PersistenceService.java
     alerts/
 ```
 
-The remaining empty packages are reserved for later phases. Automated tests are
+The remaining empty `alerts` package is reserved for later phases. Automated tests are
 under `src/test/java/com/netpulse/`.
 
 ## Compile and run
@@ -280,15 +286,107 @@ analysis, and closing the application shuts down its existing collector.
 The table shows local timestamp, severity, type, and description, with newest
 alerts first. Hover over a row to read its full description. Each `TrafficAlert`
 is immutable and stores its timestamp as an `Instant`. Only the latest 100 alerts
-are retained in memory. **Clear history** removes entries without rearming active
-conditions, so clearing alone cannot cause repeated alerts.
+are retained in memory and restored from SQLite at startup. **Clear history**
+asks for confirmation before deleting both the displayed and all persisted
+alerts. Cancelling leaves them unchanged. Successful clearing does not rearm
+active conditions, so clearing alone cannot cause repeated alerts.
 
-History and configuration are not persisted. There are no email, SMS, Telegram,
-or external notifications. Alerts describe sampled interval-average adapter
+History and configuration are persisted locally. There are no email, SMS,
+Telegram, or external notifications. Alerts describe sampled interval-average adapter
 traffic, including other applications. PowerShell sampling limits reaction time
 and can miss short bursts or threshold clear/re-cross events between readings.
 Inactivity is an observation of valid zero-traffic intervals, not an Internet
 connectivity test.
+
+## SQLite history and settings
+
+NetPulse automatically creates `data/netpulse.db` relative to the working
+directory, normally the project root. Run commands from that folder to keep
+using the same database. `.gitignore` excludes `data/` and SQLite sidecar files.
+No additional dependency is required: the existing SQLite JDBC driver is used.
+The checked-in `.mvn/jvm.config` and Surefire configuration enable its native
+access on JDK 25. If launching Java directly, add
+`--enable-native-access=ALL-UNNAMED` to the JVM command.
+
+### Schema
+
+| Table | Columns |
+|---|---|
+| `network_history` | `id INTEGER PRIMARY KEY AUTOINCREMENT`, `adapter_name TEXT`, `timestamp INTEGER`, `download_mbps REAL`, `upload_mbps REAL`, `received_bytes INTEGER`, `sent_bytes INTEGER` |
+| `traffic_summary` | `id INTEGER PRIMARY KEY AUTOINCREMENT`, `adapter_name TEXT`, `date TEXT`, `total_received_bytes INTEGER`, `total_sent_bytes INTEGER` |
+| `alerts` | `id INTEGER PRIMARY KEY AUTOINCREMENT`, `timestamp INTEGER`, `alert_type TEXT`, `severity TEXT`, `description TEXT` |
+| `alert_settings` | `id INTEGER PRIMARY KEY` (always 1), `download_threshold REAL`, `upload_threshold REAL`, `inactivity_seconds INTEGER`, `enabled INTEGER` (0 or 1) |
+
+All non-ID columns are required. Timestamps use UTC epoch milliseconds;
+the viewer formats them in local time. Summary dates use local `yyyy-MM-dd`.
+Unique constraints prevent duplicate adapter/timestamp readings, duplicate
+alerts, and multiple summary rows for one adapter/date. Time indexes support
+recent-history queries. Counter and threshold checks reject invalid values.
+
+### Saving records
+
+`PersistenceService` owns one database worker and one reusable JDBC connection.
+Its bounded queue holds at most 256 pending operations. Neither the Swing EDT
+nor the monitoring collector waits for SQLite. Prepared statements and
+try-with-resources close statements and result sets; the connection closes
+after queued work drains on shutdown.
+
+- Each fresh, valid, Up-adapter snapshot reaches persistence through the
+  existing background collector. Repeated callbacks for the same snapshot
+  are ignored. Baselines, unavailable readings, counter resets, and invalid
+  intervals are not stored as zero-speed readings.
+- The first valid reading is saved immediately, then at most once every five
+  seconds during continuous monitoring. The next actual sample after that
+  interval is used; the existing PowerShell timing often makes this about
+  six seconds. Stopping, changing sessions, a day change, and shutdown flush
+  the final pending reading, which can be less than five seconds later.
+- Network history stores interval-average Mbps and the actual cumulative
+  Windows receive/send counters. These counters include traffic before NetPulse
+  started and must not be summed to obtain session traffic.
+- Daily summaries accumulate changes in the monitor's session totals from all
+  collected valid snapshots, including those between stored history rows.
+  They represent observed traffic while NetPulse monitors the adapter, not
+  full-day traffic while the application is closed. Intervals crossing midnight
+  belong to the date when the reading is observed. Counter resets and unknown
+  intervals contribute no fabricated traffic. History and summary updates
+  commit together in one transaction.
+- New analyzer alerts are queued as soon as they are generated. Persistent
+  alerts are independent of the 100-alert in-memory display limit. Startup
+  restores the newest 100 alerts without generating them again.
+- **Apply settings** and the **Enable alerts** checkbox save the active
+  thresholds, inactivity duration and enabled state. Startup loads them before
+  enabling monitoring controls. A new database uses the defaults above.
+
+### Viewing and clearing history
+
+Scroll below the alert section and click **View saved history**.
+The nonmodal window contains **Network readings**, **Saved alerts**, and
+**Daily totals** tabs. Choose **Last 24 hours**, **Last 7 days**, or **All time**,
+then use **Refresh history** to read the latest committed records. Each tab
+shows at most 500 newest rows. Daily totals show whole selected calendar dates,
+including any part of the starting date outside a rolling 24-hour range.
+
+**Clear history** in the alert controls deletes all persisted alerts, including
+older ones outside the 100-row display, only after confirmation. Database
+failure leaves the displayed alert history intact. Monitoring history, daily
+summaries and settings are retained. Refresh an already-open history window
+after clearing to update its saved-alert tab.
+
+### Storage errors and limits
+
+Storage status appears in the dashboard. A missing/unwritable directory,
+locked database, or failed query reports an error while live monitoring,
+graphs and TCP tests remain usable. SQLite lock waits are limited to one
+second per operation. Later operations retry initialization after a startup
+failure; **Refresh history** also retries a failed history query.
+
+Failed SQL writes are reported and are not replayed indefinitely. Prolonged
+storage errors, a full queue, forced process termination, or an abrupt machine
+shutdown can leave gaps. The normal shutdown drains queued writes; after an
+eight-second wait it cancels pending work rather than holding the window open
+indefinitely. Historical rows have no automatic retention policy in this phase,
+so the database grows over time even though writes and viewer results are
+bounded. There is no cloud storage, export, account system or reporting engine.
 
 ## Run TCP transfers
 
@@ -567,7 +665,7 @@ traffic. Close other NetPulse windows and stop any server on that port first.
 Run them on an interactive Windows desktop with an active adapter:
 
 ```shell
-mvn test "-Dtest=DashboardDesktopTest,TrafficAlertsDesktopTest" "-Dnetpulse.gui.smoke=true"
+mvn test "-Dtest=DashboardDesktopTest,TrafficAlertsDesktopTest,PersistenceDesktopTest" "-Dnetpulse.gui.smoke=true"
 ```
 
 The dashboard test verifies opening the dashboard, adapter refresh/selection, real live speeds,
@@ -580,9 +678,21 @@ shutdown; it saves `target/netpulse-alerts.png`. It also watches briefly for a
 genuine idle interval. If the active adapter never becomes idle, it reports
 that explicitly instead of fabricating an inactivity alert. Controlled analyzer
 and Swing-rendering tests cover the inactivity INFO path independently.
-Normal `mvn test` skips both desktop tests.
+The persistence desktop tests save real adapter readings and alerts, restart
+the dashboard, verify restored settings and history tabs, cancel and confirm
+alert deletion, and check recovery from a blocked database path. The history
+viewer screenshot is saved to `target/netpulse-history.png`. All desktop tests
+use temporary database paths rather than the real `data/netpulse.db`.
+Normal `mvn test` skips these four opt-in desktop test cases.
 
 Alert unit tests cover independent thresholds, severity, strict comparisons,
 suppression, clear/re-cross behavior, inactivity duration/reset, duplicate and
 unavailable readings, disabled alerts, history bounds, configuration validation,
 and disabling with an invalid draft field.
+
+Database tests also use JUnit `@TempDir`, never the real application database.
+They cover initialization/table creation, prepared-statement round trips,
+duplicate suppression, time filtering, unavailable-reading exclusion, default
+and updated settings, alert clearing, transaction rollback, daily totals,
+five-second storage cadence, session restarts, shutdown flushing, locked and
+unavailable database recovery, and file/connection cleanup.

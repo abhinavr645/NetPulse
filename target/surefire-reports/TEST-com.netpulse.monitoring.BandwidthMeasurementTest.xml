@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.netpulse.monitoring.BandwidthMeasurementTest" time="0.029" tests="13" errors="0" skipped="0" failures="0" flakes="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.netpulse.monitoring.BandwidthMeasurementTest" time="0.025" tests="13" errors="0" skipped="0" failures="0" flakes="0">
   <properties>
     <property name="java.specification.version" value="25"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -9,12 +9,13 @@
     <property name="sun.arch.data.model" value="64"/>
     <property name="user.variant" value=""/>
     <property name="java.vendor.url" value="https://adoptium.net/"/>
+    <property name="user.timezone" value="Asia/Calcutta"/>
     <property name="os.name" value="Windows 11"/>
     <property name="java.vm.specification.version" value="25"/>
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="user.country" value="IN"/>
     <property name="sun.boot.library.path" value="C:\Program Files\Eclipse Adoptium\jdk-25.0.5.8-hotspot\bin"/>
-    <property name="sun.java.command" value="C:\Users\abhin\AppData\Local\Temp\surefire12522960557249292821\surefirebooter-20261117025040244_3.jar C:\Users\abhin\AppData\Local\Temp\surefire12522960557249292821 2026-11-17T02-50-40_154-jvmRun1 surefire-20261117025040244_1tmp surefire_0-20261117025040244_2tmp"/>
+    <property name="sun.java.command" value="C:\Users\abhin\AppData\Local\Temp\surefire18431589778928868483\surefirebooter-20261117030837635_3.jar C:\Users\abhin\AppData\Local\Temp\surefire18431589778928868483 2026-11-17T03-08-37_542-jvmRun1 surefire-20261117030837635_1tmp surefire_0-20261117030837635_2tmp"/>
     <property name="jdk.debug" value="release"/>
     <property name="surefire.test.class.path" value="C:\Users\abhin\projects\NetPulse\target\test-classes;C:\Users\abhin\projects\NetPulse\target\classes;C:\Users\abhin\.m2\repository\org\xerial\sqlite-jdbc\3.50.3.0\sqlite-jdbc-3.50.3.0.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter\5.13.4\junit-jupiter-5.13.4.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.13.4\junit-jupiter-api-5.13.4.jar;C:\Users\abhin\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\abhin\.m2\repository\org\junit\platform\junit-platform-commons\1.13.4\junit-platform-commons-1.13.4.jar;C:\Users\abhin\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.13.4\junit-jupiter-params-5.13.4.jar;C:\Users\abhin\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.13.4\junit-jupiter-engine-5.13.4.jar;C:\Users\abhin\.m2\repository\org\junit\platform\junit-platform-engine\1.13.4\junit-platform-engine-1.13.4.jar"/>
     <property name="sun.cpu.endian" value="little"/>
@@ -29,7 +30,7 @@
     <property name="line.separator" value="&#10;"/>
     <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
     <property name="java.specification.name" value="Java Platform API Specification"/>
-    <property name="surefire.real.class.path" value="C:\Users\abhin\AppData\Local\Temp\surefire12522960557249292821\surefirebooter-20261117025040244_3.jar"/>
+    <property name="surefire.real.class.path" value="C:\Users\abhin\AppData\Local\Temp\surefire18431589778928868483\surefirebooter-20261117030837635_3.jar"/>
     <property name="user.script" value=""/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="java.runtime.version" value="25.0.5+8-LTS"/>
@@ -62,12 +63,12 @@
   <testcase name="zeroElapsedTimeDoesNotInventThroughput" classname="com.netpulse.monitoring.BandwidthMeasurementTest" time="0.002"/>
   <testcase name="peakSurvivesSlowerSamplesAndCurrentFallsToZeroWhenIdle" classname="com.netpulse.monitoring.BandwidthMeasurementTest" time="0.001"/>
   <testcase name="rejectsNegativeElapsedTimeAndInvalidSizes" classname="com.netpulse.monitoring.BandwidthMeasurementTest" time="0.002"/>
-  <testcase name="averageUsesTotalBytesAndTimeRatherThanMeanOfSampleRates" classname="com.netpulse.monitoring.BandwidthMeasurementTest" time="0.003"/>
-  <testcase name="progressTracksBytesAndNeverExceedsOneHundredPercent" classname="com.netpulse.monitoring.BandwidthMeasurementTest" time="0.002"/>
-  <testcase name="emptyTransferHasZeroRatesAndCompleteProgress" classname="com.netpulse.monitoring.BandwidthMeasurementTest" time="0.001"/>
+  <testcase name="averageUsesTotalBytesAndTimeRatherThanMeanOfSampleRates" classname="com.netpulse.monitoring.BandwidthMeasurementTest" time="0.002"/>
+  <testcase name="progressTracksBytesAndNeverExceedsOneHundredPercent" classname="com.netpulse.monitoring.BandwidthMeasurementTest" time="0.001"/>
+  <testcase name="emptyTransferHasZeroRatesAndCompleteProgress" classname="com.netpulse.monitoring.BandwidthMeasurementTest" time="0.0"/>
   <testcase name="backwardClockReadingsCannotDecreaseElapsedTimeOrCreateSpikes" classname="com.netpulse.monitoring.BandwidthMeasurementTest" time="0.001"/>
   <testcase name="requiresStartAndRejectsNegativeByteUpdates" classname="com.netpulse.monitoring.BandwidthMeasurementTest" time="0.002"/>
-  <testcase name="finalShortWindowIsMeasuredWithoutWaitingForOneHundredMilliseconds" classname="com.netpulse.monitoring.BandwidthMeasurementTest" time="0.002"/>
+  <testcase name="finalShortWindowIsMeasuredWithoutWaitingForOneHundredMilliseconds" classname="com.netpulse.monitoring.BandwidthMeasurementTest" time="0.001"/>
   <testcase name="calculatesMbpsAndMegabytesPerSecond" classname="com.netpulse.monitoring.BandwidthMeasurementTest" time="0.001"/>
   <testcase name="byteCounterOverflowDoesNotCorruptPreviouslyRecordedBytes" classname="com.netpulse.monitoring.BandwidthMeasurementTest" time="0.001"/>
   <testcase name="unknownExpectedSizeHasNoProgressPercentage" classname="com.netpulse.monitoring.BandwidthMeasurementTest" time="0.001"/>

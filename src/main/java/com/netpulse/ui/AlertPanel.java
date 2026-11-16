@@ -148,6 +148,13 @@ final class AlertPanel extends JPanel {
                 settings.uploadThresholdMbps(), settings.inactivitySeconds()));
     }
 
+    void loadSettings(AlertSettings settings) {
+        downloadThreshold.setText(Double.toString(settings.downloadThresholdMbps()));
+        uploadThreshold.setText(Double.toString(settings.uploadThresholdMbps()));
+        inactivityDuration.setText(Long.toString(settings.inactivitySeconds()));
+        showSettings(settings);
+    }
+
     void showHistory(List<TrafficAlert> alerts) {
         // Defensive display bound as well as the analyzer's authoritative 100-alert bound.
         displayedAlerts = List.copyOf(alerts.subList(0, Math.min(100, alerts.size())));

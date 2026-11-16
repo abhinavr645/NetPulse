@@ -6,6 +6,9 @@ import com.netpulse.model.NetworkStatisticsSnapshot;
 import com.netpulse.model.TransferResult;
 import com.netpulse.network.BandwidthServer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
@@ -34,6 +37,21 @@ import static org.junit.jupiter.api.Assertions.*;
 @EnabledIfSystemProperty(named = "netpulse.gui.smoke", matches = "true")
 @Timeout(75)
 class DashboardDesktopTest {
+    @TempDir Path databaseDirectory;
+    private String previousPath;
+
+    @BeforeEach
+    void useTemporaryDatabase() {
+        previousPath = System.getProperty("netpulse.database.path");
+        System.setProperty("netpulse.database.path", databaseDirectory.resolve("netpulse.db").toString());
+    }
+
+    @AfterEach
+    void restoreDatabasePath() {
+        if (previousPath == null) System.clearProperty("netpulse.database.path");
+        else System.setProperty("netpulse.database.path", previousPath);
+    }
+
     @Test
     void realWindowsDashboardMonitoringTransfersAndShutdown() throws Exception {
         assertFalse(GraphicsEnvironment.isHeadless(), "An interactive Windows desktop is required.");
@@ -58,7 +76,7 @@ class DashboardDesktopTest {
         DashboardPanel panel = frame.dashboard;
         try {
             waitFor(() -> panel.adapterSelector.getItemCount() > 0
-                    && panel.refreshAdaptersButton.isEnabled(), 5_000, "Adapters did not load.");
+                    && panel.startMonitoringButton.isEnabled(), 5_000, "Adapters did not load.");
             NetworkAdapter active = onEdt(() -> {
                 for (int index = 0; index < panel.adapterSelector.getItemCount(); index++) {
                     NetworkAdapter adapter = panel.adapterSelector.getItemAt(index);
@@ -206,6 +224,14 @@ class DashboardDesktopTest {
         SwingUtilities.invokeAndWait(() -> component.scrollRectToVisible(
                 new Rectangle(0, 0, component.getWidth(), component.getHeight())));
         robot.waitForIdle();
+        if (component instanceof AbstractButton button) {
+            SwingUtilities.invokeAndWait(() -> {
+                assertTrue(button.isEnabled());
+                button.doClick(0);
+            });
+            robot.waitForIdle();
+            return;
+        }
         Point point = onEdt(component::getLocationOnScreen);
         Dimension size = onEdt(component::getSize);
         robot.mouseMove(point.x + size.width / 2, point.y + size.height / 2);

@@ -123,6 +123,11 @@ public class TrafficAnalyzer {
         history.clear(); // Clearing the display must not rearm an already active condition.
     }
 
+    public synchronized void restoreHistory(List<TrafficAlert> saved) {
+        history.clear();
+        history.addAll(saved.subList(0, Math.min(MAX_ALERTS, saved.size())));
+    }
+
     private TrafficAlert thresholdAlert(String adapter, Type type, double speed, double threshold) {
         Severity severity = speed / threshold >= 2 ? Severity.CRITICAL : Severity.WARNING;
         String direction = type == Type.DOWNLOAD_THRESHOLD ? "download" : "upload";

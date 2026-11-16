@@ -1,4 +1,6 @@
+com\netpulse\database\DatabaseRepositoryTest.class
 com\netpulse\ui\DashboardDesktopTest.class
+com\netpulse\database\PersistenceServiceTest$1.class
 com\netpulse\monitoring\NetworkAdapterMonitorTest$2.class
 com\netpulse\monitoring\NetworkAdapterMonitorTest.class
 com\netpulse\monitoring\NetworkAdapterMonitorTest$1.class
@@ -14,4 +16,6 @@ com\netpulse\monitoring\BandwidthMeasurementTest.class
 com\netpulse\ui\DashboardControllerTest.class
 com\netpulse\network\BandwidthTransferTest$1.class
 com\netpulse\model\TransferResultTest.class
+com\netpulse\database\PersistenceServiceTest.class
+com\netpulse\ui\PersistenceDesktopTest.class
 com\netpulse\ui\TrafficAlertsDesktopTest.class

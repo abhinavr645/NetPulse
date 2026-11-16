@@ -3,12 +3,14 @@ package com.netpulse.ui;
 import com.netpulse.network.BandwidthClient;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.swing.*;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -17,6 +19,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @Timeout(15)
 class DashboardControllerTest {
+    @TempDir
+    Path temporaryDirectory;
     @Test
     void alertsCanBeDisabledEvenWhenUnappliedThresholdTextIsInvalid() throws Exception {
         DashboardController[] controller = new DashboardController[1];
@@ -25,9 +29,11 @@ class DashboardControllerTest {
         try {
             SwingUtilities.invokeAndWait(() -> {
                 panel[0] = new DashboardPanel();
-                controller[0] = new DashboardController(panel[0]);
-                panel[0].alerts.enabled.doClick(0);
+                controller[0] = new DashboardController(panel[0], new BandwidthClient(),
+                        temporaryDirectory.resolve("netpulse.db"));
             });
+            waitForReady(panel[0]);
+            SwingUtilities.invokeAndWait(() -> panel[0].alerts.enabled.doClick(0));
             waitForSettings(panel[0], "Alerts enabled");
             SwingUtilities.invokeAndWait(() -> {
                 panel[0].alerts.downloadThreshold.setText("invalid draft");
@@ -53,6 +59,19 @@ class DashboardControllerTest {
             Thread.sleep(20);
         }
         fail("Expected " + expected + " but saw " + text.get());
+    }
+
+    private void waitForReady(DashboardPanel panel) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+        java.util.concurrent.atomic.AtomicBoolean ready = new java.util.concurrent.atomic.AtomicBoolean();
+        while (System.nanoTime() < deadline) {
+            SwingUtilities.invokeAndWait(() -> ready.set(panel.alerts.enabled.isEnabled()));
+            if (ready.get()) {
+                return;
+            }
+            Thread.sleep(20);
+        }
+        fail("Database initialization did not release the controls.");
     }
 
     @Test
@@ -82,7 +101,8 @@ class DashboardControllerTest {
                 SwingUtilities.invokeAndWait(() -> {
                     DashboardPanel panel = new DashboardPanel();
                     controller[0] = new DashboardController(panel,
-                            new BandwidthClient(listener.getLocalPort(), 10_000));
+                            new BandwidthClient(listener.getLocalPort(), 10_000),
+                            temporaryDirectory.resolve("netpulse.db"));
                     panel.transferMode.setSelectedItem("Download");
                     panel.transferSize.setText("1");
                     panel.startTestButton.doClick(0);

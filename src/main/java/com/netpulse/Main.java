@@ -7,6 +7,7 @@ import com.netpulse.monitoring.NetworkAdapterMonitor;
 import com.netpulse.network.BandwidthClient;
 import com.netpulse.network.BandwidthServer;
 import com.netpulse.ui.DashboardFrame;
+import com.netpulse.database.DatabaseManager;
 
 import javax.swing.SwingUtilities;
 
@@ -19,6 +20,14 @@ public class Main {
     public static void main(String[] args) throws IOException, InterruptedException {
         System.out.println("NetPulse - Network Bandwidth Monitoring and Analysis System");
         System.out.println("Application Started Successfully");
+
+        if (!(args.length == 1 && args[0].equalsIgnoreCase("gui"))) {
+            try (DatabaseManager database = new DatabaseManager(DatabaseManager.defaultPath())) {
+                database.initialize();
+            } catch (IOException | java.sql.SQLException exception) {
+                System.err.println("Local history is unavailable; continuing: " + exception.getMessage());
+            }
+        }
 
         if (args.length == 0) {
             return;
