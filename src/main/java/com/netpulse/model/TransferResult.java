@@ -48,7 +48,7 @@ public final class TransferResult {
     }
 
     private static BandwidthSnapshot completedMeasurement(long bytes, long elapsedNanos) {
-        // Preserve the original constructor's validation and average-only result API.
+        // A legacy result is treated as a single completed sampling window.
         if (bytes <= 0 || elapsedNanos <= 0) {
             throw new IllegalArgumentException("Byte count and elapsed time must be positive.");
         }

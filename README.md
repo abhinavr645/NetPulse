@@ -1,12 +1,13 @@
 # NetPulse - Network Bandwidth Monitoring and Analysis System
 
 NetPulse is a college Computer Networks project for monitoring and analyzing
-network bandwidth. Future phases will add a Swing desktop interface, TCP socket
-bandwidth tests, and monitoring history stored in SQLite.
+network bandwidth. Future phases will add a Swing desktop interface and
+monitoring history stored in SQLite.
 
-Phase 2 adds command-line TCP upload and download tests between separate
-processes on the same computer. GUI and database operations are not implemented
-yet.
+Phase 3 adds a reusable measurement engine to the command-line TCP upload and
+download tests. It tracks payload bytes, elapsed time, current/average/peak
+throughput, and transfer progress. GUI and database operations are not
+implemented yet.
 
 ## Technologies
 
@@ -29,8 +30,10 @@ src/main/java/com/netpulse/
         BandwidthClient.java
         TransferProtocol.java
     monitoring/
+        BandwidthMeasurement.java
     ui/
     model/
+        BandwidthSnapshot.java
         TransferResult.java
     database/
     alerts/
@@ -104,7 +107,7 @@ between 1 and 1,073,741,824 bytes (1 GiB). `10485760` bytes is exactly 10 MiB,
 or approximately 10.49 decimal MB. Modes are case-insensitive.
 
 The client prints the mode, confirmed payload byte count, elapsed seconds,
-throughput in Mbps, and speed in MB/s. Rates use decimal units: 1 MB is
+average/current/peak throughput, and progress. Rates use decimal units: 1 MB is
 1,000,000 bytes and 1 Mbps is 1,000,000 bits per second.
 
 Press Ctrl+C in the server terminal to stop it and close its client sockets.
@@ -131,6 +134,77 @@ client-side elapsed time after `READY`, including payload completion and the
 confirmation exchange; connection setup and request validation are excluded.
 Protocol bytes are excluded from payload totals.
 
+## Measurement engine
+
+`BandwidthMeasurement` in the `monitoring` package tracks one transfer. Its
+methods are synchronized, so a transfer thread can record bytes while another
+thread reads statistics. `BandwidthSnapshot` is a Java record: an immutable data
+object containing a consistent view of all counters and rates.
+
+The engine supports `start()`, `recordBytes(count)`, `getSnapshot()`, and
+`finish()`. Production timing uses `System.nanoTime()`. Tests inject a
+controllable clock rather than relying on sleeps or real network speeds.
+
+Calculations:
+
+```text
+current bytes/second = bytes since the previous sample / seconds since that sample
+average bytes/second = total payload bytes / total elapsed seconds
+peak bytes/second    = highest sampled current rate
+MB/s                 = bytes/second / 1,000,000
+Mbps                 = MB/s * 8
+progress             = min(100, total payload bytes / expected bytes * 100)
+```
+
+Current and peak rates refresh when a byte update or snapshot request reaches
+at least 100 ms since the previous sample. `finish()` also measures a shorter
+final interval. No timer thread is required for the engine: callers poll
+`getSnapshot()` when they need an update. During idle periods, polling advances
+elapsed time and eventually samples a zero current rate. Average throughput
+uses total bytes and time, not the arithmetic mean of sampled rates.
+
+An empty measurement has zero rates; a known expected size of zero means 100%
+progress because there is no payload to transfer. An unknown expected size,
+created with `new BandwidthMeasurement()`, has no percentage
+(`OptionalDouble.empty()`). Negative expected sizes and byte updates are
+rejected. Zero elapsed time produces zero rates, negative elapsed inputs are
+rejected, and backward clock readings cannot reduce elapsed time. Finishing is
+idempotent and freezes the final statistics. A new engine is needed per transfer.
+
+To read updates independently of the console, create an engine and pass it to
+the client overload from a background task:
+
+```java
+BandwidthMeasurement measurement = new BandwidthMeasurement(10_485_760);
+
+try (var worker = Executors.newSingleThreadExecutor()) {
+    var transfer = worker.submit(() -> client.transfer("UPLOAD", 10_485_760, measurement));
+    // Poll this as needed while the background transfer runs.
+    BandwidthSnapshot update = measurement.getSnapshot();
+    TransferResult result = transfer.get();
+}
+```
+
+`TransferResult.getMeasurement()` exposes the final snapshot. Existing
+`getThroughputMbps()` and `getMegabytesPerSecond()` methods still return average
+rates, preserving the Phase 2 API. The TCP command-line size range remains
+1 byte to 1 GiB; zero-byte support belongs to the reusable engine.
+
+Only successful payload reads/writes update counters. The wire protocol,
+exact-count checks, and server acknowledgments remain unchanged. Live upload
+counts represent bytes written to the socket; receiver confirmation is required
+before returning a successful result. Downloads count payload bytes read.
+Progress reaching 100% alone does not mean the final confirmation has succeeded.
+Failed transfers throw an exception and freeze partial statistics without
+returning a successful `TransferResult`.
+
+Sampled peaks depend on polling times, chunk completion times, and sample
+duration; they are not physical link capacity. For transfers shorter than
+100 ms, the final interval may be the only sample, so current, average, and peak
+can legitimately be equal. Longer transfers may end with a zero current rate
+while waiting for confirmation. Very short transfers remain sensitive to
+scheduling overhead.
+
 Connections have a three-second connect timeout, five-second read inactivity
 timeout, and a 60-second overall deadline. Closing a socket at the overall
 deadline also stops blocked writes. The server uses four client worker threads
@@ -153,3 +227,6 @@ ports. They do not require a manually running server or use port 5001.
 Coverage includes connections, uploads, downloads, exact byte counts, invalid
 requests, unavailable servers, malformed transfers, timeout handling,
 concurrent clients, server shutdown, and throughput unit conversions.
+Measurement tests also cover zero/invalid elapsed time, empty and unknown-size
+measurements, weighted averages, sampled peaks, idle periods, progress limits,
+immutable snapshots, and polling statistics during real uploads/downloads.

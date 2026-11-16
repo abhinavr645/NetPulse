@@ -40,8 +40,8 @@ public class BandwidthClient {
     public TransferResult transfer(String mode, long size, BandwidthMeasurement measurement) throws IOException {
         String operation = TransferProtocol.validateRequest(mode, size);
         Objects.requireNonNull(measurement, "Measurement is required.");
-        if (measurement.getSnapshot().expectedBytes().isPresent()
-                && measurement.getSnapshot().expectedBytes().getAsLong() != size) {
+        BandwidthSnapshot initial = measurement.getSnapshot();
+        if (initial.expectedBytes().isPresent() && initial.expectedBytes().getAsLong() != size) {
             throw new IllegalArgumentException("Measurement expected size must match the request.");
         }
         ScheduledExecutorService deadline = Executors.newSingleThreadScheduledExecutor();
