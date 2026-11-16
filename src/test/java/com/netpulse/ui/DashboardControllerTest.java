@@ -18,6 +18,44 @@ import static org.junit.jupiter.api.Assertions.*;
 @Timeout(15)
 class DashboardControllerTest {
     @Test
+    void alertsCanBeDisabledEvenWhenUnappliedThresholdTextIsInvalid() throws Exception {
+        DashboardController[] controller = new DashboardController[1];
+        DashboardPanel[] panel = new DashboardPanel[1];
+        CountDownLatch closed = new CountDownLatch(1);
+        try {
+            SwingUtilities.invokeAndWait(() -> {
+                panel[0] = new DashboardPanel();
+                controller[0] = new DashboardController(panel[0]);
+                panel[0].alerts.enabled.doClick(0);
+            });
+            waitForSettings(panel[0], "Alerts enabled");
+            SwingUtilities.invokeAndWait(() -> {
+                panel[0].alerts.downloadThreshold.setText("invalid draft");
+                panel[0].alerts.enabled.doClick(0);
+            });
+            waitForSettings(panel[0], "Alerts disabled");
+        } finally {
+            if (controller[0] != null) {
+                SwingUtilities.invokeAndWait(() -> controller[0].shutdown(closed::countDown));
+                assertTrue(closed.await(3, TimeUnit.SECONDS));
+            }
+        }
+    }
+
+    private void waitForSettings(DashboardPanel panel, String expected) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+        java.util.concurrent.atomic.AtomicReference<String> text = new java.util.concurrent.atomic.AtomicReference<>();
+        while (System.nanoTime() < deadline) {
+            SwingUtilities.invokeAndWait(() -> text.set(panel.alerts.settingsMessage.getText()));
+            if (text.get().startsWith(expected)) {
+                return;
+            }
+            Thread.sleep(20);
+        }
+        fail("Expected " + expected + " but saw " + text.get());
+    }
+
+    @Test
     void aBlockedTransferDoesNotBlockTheEdtAndIsCancelledOnShutdown() throws Exception {
         CountDownLatch requestReceived = new CountDownLatch(1);
         CountDownLatch closed = new CountDownLatch(1);

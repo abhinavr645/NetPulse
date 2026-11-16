@@ -4,9 +4,10 @@ NetPulse is a college Computer Networks project with a Swing dashboard for
 network adapter monitoring, real-time bandwidth graphs, and TCP bandwidth tests.
 Future phases will add monitoring history stored in SQLite.
 
-Phase 6 adds separate live download and upload graphs to the dark-themed Swing
-dashboard. Adapter statistics and TCP payload measurements remain separate.
-Alerts, traffic analysis, and database operations are not implemented yet.
+Phase 7 adds simple adapter-traffic analysis and bounded in-app alert history.
+The dashboard includes live download/upload graphs and TCP bandwidth tests.
+Adapter statistics and TCP payload measurements remain separate. Database
+operations and persistent alert history are not implemented yet.
 
 ## Technologies
 
@@ -33,17 +34,21 @@ src/main/java/com/netpulse/
         BandwidthMeasurement.java
         NetworkAdapterMonitor.java
         WindowsAdapterStatistics.java
+        TrafficAnalyzer.java
     ui/
         DashboardFrame.java
         DashboardPanel.java
         DashboardController.java
         DashboardStyle.java
         BandwidthGraphPanel.java
+        AlertPanel.java
     model/
         BandwidthSnapshot.java
         BandwidthGraphHistory.java
         NetworkAdapter.java
         NetworkStatisticsSnapshot.java
+        AlertSettings.java
+        TrafficAlert.java
         TransferResult.java
     database/
     alerts/
@@ -205,6 +210,85 @@ Graphs show interval-average adapter throughput, not instantaneous packet
 traffic or available bandwidth capacity. PowerShell's existing sampling delay
 limits detail for short bursts. During the first minute, the portion before the
 session began is intentionally empty.
+
+## Traffic analysis and alerts
+
+Scroll to **Traffic analysis & alerts** in the dashboard. This section analyzes
+the selected adapter's actual statistics. TCP test results are not used as
+adapter traffic and never trigger these alerts directly.
+
+Defaults, defined in `AlertSettings.defaults()`:
+
+| Setting | Default |
+|---|---|
+| Alerts | Disabled |
+| Download threshold | 100 Mbps |
+| Upload threshold | 50 Mbps |
+| Inactivity duration | 30 seconds |
+| Recent history limit | 100 alerts |
+
+The speed defaults are illustrative warning limits for a college demonstration,
+not estimates of available bandwidth or Internet connection capacity. Change
+them to values appropriate for the selected adapter and demonstration.
+
+Edit Download Mbps, Upload Mbps, and Idle seconds, then click **Apply settings**.
+Thresholds must be finite numbers greater than zero; the duration must be a
+whole number from 1 to 86400 seconds. **Enable alerts** applies valid current
+settings and enables detection. Unchecking it disables detection even if an
+unapplied text field contains invalid input. Invalid settings leave the previous
+configuration active and display an explanatory message.
+
+### Detection and severity
+
+`TrafficAnalyzer` is a reusable, synchronized class in `monitoring`. The existing
+background snapshot collector invokes it once for each new immutable
+`NetworkStatisticsSnapshot`. No analysis runs on the EDT, and no extra
+PowerShell commands or notification threads are created. Immutable alert/history
+copies are sent to Swing on the EDT.
+
+| Condition | Severity | Behavior |
+|---|---|---|
+| Speed strictly exceeds its configured threshold | WARNING, amber | One alert for that direction |
+| Speed is at least twice its threshold when first exceeded | CRITICAL, red | One higher-severity threshold alert |
+| Both directions remain exactly zero for the configured observed duration | INFO, blue | Informational inactivity alert |
+
+Download and upload conditions are independent. Severity is chosen when a
+threshold condition first occurs. A continuously active condition is suppressed,
+including later increases in speed; it does not generate an alert every sample.
+A valid reading at or below the threshold clears that direction's condition,
+allowing another alert if it exceeds the threshold again.
+
+Inactivity accumulates consecutive valid zero-traffic sampling intervals. Those
+intervals are measured by the adapter monitor with `System.nanoTime()`, not by
+UI timer ticks. Traffic resuming in either direction resets the inactivity timer
+and rearms its alert. A long zero-traffic interval can satisfy a short configured
+duration in one reading. An idle adapter can be normal: the INFO description
+explicitly says that idle traffic does not imply Internet disconnection.
+
+Missing speeds, nonpositive intervals, adapters not Up, baseline/reset states,
+and failed readings do not generate alerts. They reset inactivity accumulation
+so unknown time is not treated as observed idle time. They do not prove an
+already active threshold condition has cleared; a valid below-limit reading is
+required. Duplicate references to the same snapshot are ignored.
+
+Changing settings or starting a new monitoring session resets detection state
+for the next fresh reading. Existing history remains. Stopping monitoring stops
+analysis, and closing the application shuts down its existing collector.
+
+### Alert history and limitations
+
+The table shows local timestamp, severity, type, and description, with newest
+alerts first. Hover over a row to read its full description. Each `TrafficAlert`
+is immutable and stores its timestamp as an `Instant`. Only the latest 100 alerts
+are retained in memory. **Clear history** removes entries without rearming active
+conditions, so clearing alone cannot cause repeated alerts.
+
+History and configuration are not persisted. There are no email, SMS, Telegram,
+or external notifications. Alerts describe sampled interval-average adapter
+traffic, including other applications. PowerShell sampling limits reaction time
+and can miss short bursts or threshold clear/re-cross events between readings.
+Inactivity is an observation of valid zero-traffic intervals, not an Internet
+connectivity test.
 
 ## Run TCP transfers
 
@@ -475,19 +559,30 @@ blocked TCP read. Graph tests cover sample collection, duplicate snapshots,
 stopped history, immutable views, and painting at different sizes. They do not
 open a window or require real PowerShell counters.
 
-An additional desktop test is opt-in because it opens a visible window, moves
-the mouse, reads real Windows counters, and temporarily starts a test server on
-port 5001. It also attempts a small HTTPS download of a public Java API page to
+Additional desktop tests are opt-in because they open visible windows, move
+the mouse, read real Windows counters, and temporarily start a test server on
+port 5001. The dashboard test also attempts a small HTTPS download of a public Java API page to
 generate real adapter activity; if that request fails, it observes existing
 traffic. Close other NetPulse windows and stop any server on that port first.
-Run it on an interactive Windows desktop with an active adapter:
+Run them on an interactive Windows desktop with an active adapter:
 
 ```shell
-mvn test "-Dtest=DashboardDesktopTest" "-Dnetpulse.gui.smoke=true"
+mvn test "-Dtest=DashboardDesktopTest,TrafficAlertsDesktopTest" "-Dnetpulse.gui.smoke=true"
 ```
 
-It verifies opening the dashboard, adapter refresh/selection, real live speeds,
+The dashboard test verifies opening the dashboard, adapter refresh/selection, real live speeds,
 both graphs, resize behavior, frozen graphs after stopping, an unavailable
 adapter, a missing TCP server, both transfer modes, and closing with monitoring
 active. It saves actual screenshots to `target/netpulse-dashboard.png` and
-`target/netpulse-graphs.png`. Normal `mvn test` skips this one desktop test.
+`target/netpulse-graphs.png`. The alert desktop test verifies settings,
+real threshold alerts, suppression, disabling, clearing, responsiveness, and
+shutdown; it saves `target/netpulse-alerts.png`. It also watches briefly for a
+genuine idle interval. If the active adapter never becomes idle, it reports
+that explicitly instead of fabricating an inactivity alert. Controlled analyzer
+and Swing-rendering tests cover the inactivity INFO path independently.
+Normal `mvn test` skips both desktop tests.
+
+Alert unit tests cover independent thresholds, severity, strict comparisons,
+suppression, clear/re-cross behavior, inactivity duration/reset, duplicate and
+unavailable readings, disabled alerts, history bounds, configuration validation,
+and disabling with an invalid draft field.

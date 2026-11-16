@@ -14,6 +14,7 @@ final class DashboardStyle {
     static final Color GREEN = new Color(65, 218, 174);
     static final Color BLUE = new Color(103, 170, 255);
     static final Color ERROR = new Color(255, 148, 148);
+    static final Color WARNING = new Color(255, 205, 105);
 
     private DashboardStyle() { }
 

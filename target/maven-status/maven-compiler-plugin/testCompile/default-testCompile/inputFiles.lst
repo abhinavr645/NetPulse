@@ -2,10 +2,13 @@ C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\model\BandwidthGraph
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\model\TransferResultTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\monitoring\BandwidthMeasurementTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\monitoring\NetworkAdapterMonitorTest.java
+C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\monitoring\TrafficAnalyzerTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\monitoring\WindowsAdapterStatisticsTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\network\BandwidthClientFailureTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\network\BandwidthTransferTest.java
+C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\AlertPanelTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\BandwidthGraphPanelTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\DashboardControllerTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\DashboardDesktopTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\DashboardPanelTest.java
+C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\TrafficAlertsDesktopTest.java

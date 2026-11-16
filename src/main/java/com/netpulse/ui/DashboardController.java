@@ -3,7 +3,10 @@ package com.netpulse.ui;
 import com.netpulse.model.NetworkAdapter;
 import com.netpulse.model.NetworkStatisticsSnapshot;
 import com.netpulse.model.TransferResult;
+import com.netpulse.model.AlertSettings;
+import com.netpulse.model.TrafficAlert;
 import com.netpulse.monitoring.NetworkAdapterMonitor;
+import com.netpulse.monitoring.TrafficAnalyzer;
 import com.netpulse.network.BandwidthClient;
 
 import javax.swing.*;
@@ -21,6 +24,10 @@ import java.util.concurrent.ScheduledExecutorService;
 final class DashboardController {
     private final DashboardPanel view;
     private final BandwidthClient client;
+    private final TrafficAnalyzer analyzer = new TrafficAnalyzer();
+    private AlertSettings appliedAlertSettings = AlertSettings.defaults();
+    private volatile boolean alertMonitoringActive;
+    private boolean alertSettingsBusy;
     // Virtual threads make the existing Socket I/O interruptible during window shutdown.
     private final ExecutorService tasks = Executors.newVirtualThreadPerTaskExecutor();
     private final Object monitorLock = new Object();
@@ -49,6 +56,9 @@ final class DashboardController {
         view.stopMonitoringButton.addActionListener(event -> stopMonitoring());
         view.refreshButton.addActionListener(event -> refreshSnapshot());
         view.startTestButton.addActionListener(event -> startTest());
+        view.alerts.applyButton.addActionListener(event -> applyAlertSettings());
+        view.alerts.enabled.addActionListener(event -> applyAlertSettings());
+        view.alerts.clearButton.addActionListener(event -> clearAlertHistory());
         displayTimer = new Timer(500, event -> {
             refreshSnapshot();
             view.repaintGraphs();
@@ -94,6 +104,7 @@ final class DashboardController {
             return;
         }
         monitoringBusy = true;
+        alertMonitoringActive = true;
         view.startGraphs();
         view.monitoringStatus.setText("Starting...");
         view.monitorMessage.setText("Starting a new adapter monitoring session...");
@@ -117,6 +128,7 @@ final class DashboardController {
                     updateControls();
                 });
             } catch (Exception exception) {
+                alertMonitoringActive = false;
                 created.close();
                 synchronized (monitorLock) {
                     if (monitor == created) {
@@ -140,6 +152,7 @@ final class DashboardController {
             return;
         }
         monitoringBusy = true;
+        alertMonitoringActive = false;
         view.stopGraphs();
         view.monitoringStatus.setText("Stopping...");
         updateControls();
@@ -181,11 +194,19 @@ final class DashboardController {
         if (active != graphMonitor) {
             graphMonitor = active;
             lastGraphSnapshot = null;
+            analyzer.resetSession();
         }
         if (active != null) {
             NetworkStatisticsSnapshot snapshot = active.getSnapshot();
             if (snapshot != lastGraphSnapshot) {
                 lastGraphSnapshot = snapshot;
+                if (alertMonitoringActive && monitor == active) {
+                    List<TrafficAlert> generated = analyzer.analyze(snapshot);
+                    if (!generated.isEmpty()) {
+                        List<TrafficAlert> history = analyzer.getHistory();
+                        onEdt(() -> view.alerts.showHistory(history));
+                    }
+                }
                 onEdt(() -> {
                     if (monitor == active && view.graphHistory.isRunning()) {
                         view.addGraphSnapshot(snapshot);
@@ -233,6 +254,45 @@ final class DashboardController {
         });
     }
 
+    private void applyAlertSettings() {
+        if (closing || alertSettingsBusy) {
+            return;
+        }
+        AlertSettings settings;
+        try {
+            // Disabling must remain possible even when an unapplied text field is invalid.
+            settings = appliedAlertSettings.enabled() && !view.alerts.enabled.isSelected()
+                    ? new AlertSettings(false, appliedAlertSettings.downloadThresholdMbps(),
+                            appliedAlertSettings.uploadThresholdMbps(), appliedAlertSettings.inactivitySeconds())
+                    : view.alerts.readSettings();
+        } catch (IllegalArgumentException exception) {
+            view.alerts.enabled.setSelected(appliedAlertSettings.enabled());
+            view.alerts.settingsMessage.setForeground(DashboardStyle.ERROR);
+            view.alerts.settingsMessage.setText("Settings unchanged: " + exception.getMessage());
+            return;
+        }
+        alertSettingsBusy = true;
+        updateControls();
+        graphCollector.execute(() -> {
+            analyzer.configure(settings);
+            onEdt(() -> {
+                appliedAlertSettings = settings;
+                alertSettingsBusy = false;
+                view.alerts.showSettings(settings);
+                updateControls();
+            });
+        });
+    }
+
+    private void clearAlertHistory() {
+        if (!closing) {
+            graphCollector.execute(() -> {
+                analyzer.clearHistory();
+                onEdt(() -> view.alerts.showHistory(List.of()));
+            });
+        }
+    }
+
     private void showTestError(String message) {
         view.testMessage.setText(message);
         view.testMessage.setForeground(DashboardStyle.ERROR);
@@ -248,6 +308,12 @@ final class DashboardController {
         view.startTestButton.setEnabled(!closing && !testBusy);
         view.transferMode.setEnabled(!closing && !testBusy);
         view.transferSize.setEnabled(!closing && !testBusy);
+        view.alerts.enabled.setEnabled(!closing && !alertSettingsBusy);
+        view.alerts.applyButton.setEnabled(!closing && !alertSettingsBusy);
+        view.alerts.downloadThreshold.setEnabled(!closing && !alertSettingsBusy);
+        view.alerts.uploadThreshold.setEnabled(!closing && !alertSettingsBusy);
+        view.alerts.inactivityDuration.setEnabled(!closing && !alertSettingsBusy);
+        view.alerts.clearButton.setEnabled(!closing);
     }
 
     private void onEdt(Runnable update) {
@@ -263,6 +329,7 @@ final class DashboardController {
             return;
         }
         closing = true;
+        alertMonitoringActive = false;
         displayTimer.stop();
         view.stopGraphs();
         updateControls();
@@ -279,6 +346,7 @@ final class DashboardController {
     // Also safe for the JVM shutdown hook: this method never touches Swing components.
     void stopBackgroundWork() {
         closing = true;
+        alertMonitoringActive = false;
         graphCollector.shutdownNow();
         tasks.shutdownNow();
         NetworkAdapterMonitor active;
