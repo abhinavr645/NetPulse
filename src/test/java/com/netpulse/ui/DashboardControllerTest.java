@@ -1,7 +1,15 @@
 package com.netpulse.ui;
 
 import com.netpulse.network.BandwidthClient;
+import com.netpulse.database.DatabaseManager;
+import com.netpulse.database.NetworkHistoryRepository;
+import com.netpulse.database.TrafficSummaryRepository;
+import com.netpulse.model.NetworkAdapter;
+import com.netpulse.model.NetworkStatisticsSnapshot;
+import com.netpulse.monitoring.NetworkAdapterMonitor;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -11,6 +19,12 @@ import java.io.DataOutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.OptionalDouble;
+import java.util.OptionalLong;
+import java.util.function.BooleanSupplier;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -120,5 +134,68 @@ class DashboardControllerTest {
             assertTrue(closed.await(3, TimeUnit.SECONDS), "Cleanup should interrupt socket I/O promptly.");
             peer.get(3, TimeUnit.SECONDS);
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void finalUncollectedReadingIsSavedOnStopAndOnWindowShutdown(boolean closeWhileMonitoring) throws Exception {
+        Path path = temporaryDirectory.resolve("final-reading.db");
+        DashboardPanel[] panel = new DashboardPanel[1];
+        DashboardController[] controller = new DashboardController[1];
+        CountDownLatch closed = new CountDownLatch(1);
+        var adapter = new NetworkAdapter(600, "test", "Lifecycle fixture", true, false);
+        try {
+            SwingUtilities.invokeAndWait(() -> {
+                panel[0] = new DashboardPanel();
+                controller[0] = new DashboardController(panel[0], new BandwidthClient(), path, selected ->
+                        new NetworkAdapterMonitor(selected) {
+                            private final NetworkStatisticsSnapshot finalSample = new NetworkStatisticsSnapshot(
+                                    selected, "Lifecycle fixture", "Up", OptionalLong.of(1100), OptionalLong.of(2050),
+                                    100, 50, 1_000_000_000L, OptionalDouble.of(100), OptionalDouble.of(50),
+                                    NetworkStatisticsSnapshot.State.VALID, "Controlled final reading");
+                            @Override public void start() { /* No background source in this deterministic test. */ }
+                            @Override public NetworkStatisticsSnapshot stopAndGetLastSnapshot() {
+                                super.stopAndGetLastSnapshot();
+                                return finalSample; // Never exposed to the periodic collector.
+                            }
+                        });
+            });
+            waitForReady(panel[0]);
+            await(() -> panel[0].adapterSelector.isEnabled());
+            SwingUtilities.invokeAndWait(() -> panel[0].setAdapters(List.of(adapter), null));
+            int sessions = closeWhileMonitoring ? 1 : 2;
+            for (int session = 0; session < sessions; session++) {
+                SwingUtilities.invokeAndWait(() -> panel[0].startMonitoringButton.doClick(0));
+                await(() -> panel[0].stopMonitoringButton.isEnabled());
+                if (!closeWhileMonitoring) {
+                    SwingUtilities.invokeAndWait(() -> panel[0].stopMonitoringButton.doClick(0));
+                    await(() -> panel[0].startMonitoringButton.isEnabled());
+                }
+            }
+        } finally {
+            if (controller[0] != null) {
+                SwingUtilities.invokeAndWait(() -> controller[0].shutdown(closed::countDown));
+                assertTrue(closed.await(5, TimeUnit.SECONDS));
+            }
+        }
+        try (DatabaseManager database = new DatabaseManager(path)) {
+            database.initialize();
+            int sessions = closeWhileMonitoring ? 1 : 2;
+            assertEquals(sessions, new NetworkHistoryRepository(database).recent(Instant.EPOCH, 100).size());
+            var totals = new TrafficSummaryRepository(database).recent(LocalDate.of(2000, 1, 1)).getFirst();
+            assertEquals(100 * sessions, totals.totalReceivedBytes());
+            assertEquals(50 * sessions, totals.totalSentBytes());
+        }
+    }
+
+    private void await(BooleanSupplier condition) throws Exception {
+        long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+        var ready = new java.util.concurrent.atomic.AtomicBoolean();
+        while (System.nanoTime() < end) {
+            SwingUtilities.invokeAndWait(() -> ready.set(condition.getAsBoolean()));
+            if (ready.get()) return;
+            Thread.sleep(20);
+        }
+        fail("Dashboard lifecycle action did not complete.");
     }
 }

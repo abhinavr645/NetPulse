@@ -24,7 +24,7 @@
             <version>3.50.3.0</version>
         </dependency>
 
-        <!-- JUnit 5 for future tests -->
+        <!-- JUnit 5 for automated tests -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

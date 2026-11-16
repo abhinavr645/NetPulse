@@ -179,6 +179,22 @@ class NetworkAdapterMonitorTest {
     }
 
     @Test
+    void stoppingReturnsTheLastRealReadingEvenAfterThePublicSnapshotBecomesStopped() {
+        AtomicLong clock = new AtomicLong();
+        try (NetworkAdapterMonitor monitor = monitor(clock, counters(100, 200), counters(300, 500))) {
+            monitor.sampleOnce();
+            clock.set(1_000_000_000L);
+            monitor.sampleOnce();
+            var last = monitor.getSnapshot();
+            assertSame(last, monitor.stopAndGetLastSnapshot());
+            assertEquals(State.VALID, last.state());
+            assertEquals(200, last.totalReceivedBytes());
+            assertEquals(State.STOPPED, monitor.getSnapshot().state());
+            assertSame(last, monitor.stopAndGetLastSnapshot());
+        }
+    }
+
+    @Test
     void stopInterruptsActiveReadAndTerminatesTheWorker() throws InterruptedException {
         CountDownLatch entered = new CountDownLatch(1);
         CountDownLatch exited = new CountDownLatch(1);

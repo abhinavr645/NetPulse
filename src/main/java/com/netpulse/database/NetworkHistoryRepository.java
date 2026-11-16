@@ -60,4 +60,13 @@ public class NetworkHistoryRepository {
         }
         return List.copyOf(entries);
     }
+
+    /** Removes only detailed readings; daily summaries and alerts are deliberately retained. */
+    public int deleteBefore(Instant cutoff) throws SQLException {
+        try (var statement = database.connection().prepareStatement(
+                "DELETE FROM network_history WHERE timestamp < ?")) {
+            statement.setLong(1, cutoff.toEpochMilli());
+            return statement.executeUpdate();
+        }
+    }
 }

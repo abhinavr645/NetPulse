@@ -8,10 +8,12 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
@@ -31,6 +33,9 @@ public class PersistenceService implements AutoCloseable {
     private final TrafficSummaryRepository summaries;
     private final Clock clock;
     private final LongSupplier nanoClock;
+    private final int retentionDays;
+    private Instant lastRetentionRun;
+    private final AtomicInteger failedOperations = new AtomicInteger();
     private final BiConsumer<Boolean, String> status;
     private final ThreadPoolExecutor worker = new ThreadPoolExecutor(1, 1, 0, TimeUnit.MILLISECONDS,
             new ArrayBlockingQueue<>(256), task -> new Thread(task, "netpulse-database"));
@@ -45,10 +50,18 @@ public class PersistenceService implements AutoCloseable {
     private long lastSaveNanos;
 
     public PersistenceService(Path path, BiConsumer<Boolean, String> status) {
-        this(path, status, Clock.systemDefaultZone(), System::nanoTime);
+        this(path, status, Clock.systemDefaultZone(), System::nanoTime, configuredRetentionDays());
     }
 
     PersistenceService(Path path, BiConsumer<Boolean, String> status, Clock clock, LongSupplier nanoClock) {
+        this(path, status, clock, nanoClock, 0);
+    }
+
+    PersistenceService(Path path, BiConsumer<Boolean, String> status, Clock clock, LongSupplier nanoClock,
+                       int retentionDays) {
+        if (retentionDays < 0 || retentionDays > 36_500) {
+            throw new IllegalArgumentException("Retention days must be 0 (disabled) or 1 to 36500.");
+        }
         database = new DatabaseManager(path);
         network = new NetworkHistoryRepository(database);
         alerts = new AlertRepository(database);
@@ -57,6 +70,24 @@ public class PersistenceService implements AutoCloseable {
         this.status = status;
         this.clock = clock;
         this.nanoClock = nanoClock;
+        this.retentionDays = retentionDays;
+    }
+
+    private static int configuredRetentionDays() {
+        // Deletion is opt-in. Invalid configuration also preserves all existing readings.
+        if (!Boolean.getBoolean("netpulse.history.retention.enabled")) {
+            return 0;
+        }
+        try {
+            int days = Integer.parseInt(System.getProperty("netpulse.history.retention.days", "30"));
+            if (days >= 1 && days <= 36_500) {
+                return days;
+            }
+        } catch (NumberFormatException ignored) {
+            // A malformed property must never accidentally enable deletion.
+        }
+        System.err.println("Network history retention disabled: days must be an integer from 1 to 36500.");
+        return 0;
     }
 
     public void initialize(Consumer<StartupData> loaded) {
@@ -66,6 +97,14 @@ public class PersistenceService implements AutoCloseable {
 
     public synchronized void beginSession() {
         flush();
+        if (pending != null) {
+            // A full queue must not attribute the previous adapter's unsaved bytes to a new session.
+            failedOperations.incrementAndGet();
+            status.accept(false, "Storage queue full: the previous session's pending reading was not saved.");
+            pending = null;
+            pendingReceived = 0;
+            pendingSent = 0;
+        }
         previousSnapshot = null;
         previousReceived = 0;
         previousSent = 0;
@@ -154,9 +193,16 @@ public class PersistenceService implements AutoCloseable {
                 try {
                     // Reattempt initialization after a temporary startup/path failure.
                     database.initialize();
+                    maintainRetention();
                     work.run();
-                    status.accept(true, "History ready: " + database.getPath());
+                    String earlierFailures = failedOperations.get() == 0 ? ""
+                            : " | Earlier storage failures: " + failedOperations.get()
+                                    + "; failed writes were not replayed.";
+                    status.accept(true, "History ready: " + database.getPath()
+                            + " | Network retention: " + (retentionDays == 0 ? "off" : retentionDays + " days")
+                            + earlierFailures);
                 } catch (Exception exception) {
+                    failedOperations.incrementAndGet();
                     status.accept(false, "Storage unavailable: " + exception.getMessage()
                             + ". Live monitoring continues; failed writes are not saved.");
                     failed.run();
@@ -164,9 +210,21 @@ public class PersistenceService implements AutoCloseable {
             });
             return true;
         } catch (java.util.concurrent.RejectedExecutionException exception) {
+            failedOperations.incrementAndGet();
             status.accept(false, "Storage queue is full or stopped. Some data has not been saved.");
             failed.run();
             return false;
+        }
+    }
+
+    private void maintainRetention() throws java.sql.SQLException {
+        if (retentionDays == 0) {
+            return;
+        }
+        Instant now = clock.instant();
+        if (lastRetentionRun == null || !now.isBefore(lastRetentionRun.plus(1, ChronoUnit.HOURS))) {
+            network.deleteBefore(now.minus(retentionDays, ChronoUnit.DAYS));
+            lastRetentionRun = now;
         }
     }
 

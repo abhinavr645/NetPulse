@@ -28,6 +28,7 @@ public class NetworkAdapterMonitor implements AutoCloseable {
     private final long pollIntervalMillis;
     private final Object sampleLock = new Object();
     private volatile NetworkStatisticsSnapshot latest;
+    private NetworkStatisticsSnapshot finalReading;
     private volatile boolean stopped;
     private ScheduledExecutorService executor;
     private Counters previous;
@@ -164,11 +165,17 @@ public class NetworkAdapterMonitor implements AutoCloseable {
     }
 
     public void stop() {
+        stopAndGetLastSnapshot();
+    }
+
+    /** Stops sampling and retains the last real reading for a final persistence flush. */
+    public NetworkStatisticsSnapshot stopAndGetLastSnapshot() {
         ScheduledExecutorService worker;
         synchronized (this) {
             if (stopped) {
-                return;
+                return finalReading;
             }
+            finalReading = latest;
             stopped = true;
             worker = executor;
             if (worker != null) {
@@ -185,10 +192,11 @@ public class NetworkAdapterMonitor implements AutoCloseable {
                 Thread.currentThread().interrupt();
             }
         }
-        NetworkStatisticsSnapshot last = latest;
+        NetworkStatisticsSnapshot last = finalReading;
         latest = new NetworkStatisticsSnapshot(adapter, last.adapterName(), last.adapterStatus(),
                 last.receivedBytes(), last.sentBytes(), last.totalReceivedBytes(), last.totalSentBytes(),
                 0, OptionalDouble.empty(), OptionalDouble.empty(), State.STOPPED, "Monitoring stopped.");
+        return last;
     }
 
     @Override

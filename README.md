@@ -4,9 +4,10 @@ NetPulse is a college Computer Networks project with a Swing dashboard for
 network adapter monitoring, real-time bandwidth graphs, TCP bandwidth tests,
 and monitoring history stored in SQLite.
 
-Phase 8 adds SQLite monitoring history, daily observed-traffic summaries,
+NetPulse includes SQLite monitoring history, daily observed-traffic summaries,
 persistent alerts and saved alert settings, plus a dashboard history viewer.
-Adapter statistics and TCP payload measurements remain separate.
+Phase 9 verifies the complete application and fixes lifecycle/storage edge
+cases. Adapter statistics and TCP payload measurements remain separate.
 
 ## Technologies
 
@@ -340,6 +341,8 @@ after queued work drains on shutdown.
   interval is used; the existing PowerShell timing often makes this about
   six seconds. Stopping, changing sessions, a day change, and shutdown flush
   the final pending reading, which can be less than five seconds later.
+  Stop/shutdown also captures the monitor's final published reading if it is
+  newer than the collector's last poll; identity deduplication prevents recounting.
 - Network history stores interval-average Mbps and the actual cumulative
   Windows receive/send counters. These counters include traffic before NetPulse
   started and must not be summed to obtain session traffic.
@@ -384,9 +387,36 @@ Failed SQL writes are reported and are not replayed indefinitely. Prolonged
 storage errors, a full queue, forced process termination, or an abrupt machine
 shutdown can leave gaps. The normal shutdown drains queued writes; after an
 eight-second wait it cancels pending work rather than holding the window open
-indefinitely. Historical rows have no automatic retention policy in this phase,
-so the database grows over time even though writes and viewer results are
-bounded. There is no cloud storage, export, account system or reporting engine.
+indefinitely. A session change cannot attribute an unsaved previous session's
+bytes to the next adapter. Queue overflow reports the lost pending reading
+instead. After recovery the storage status retains a notice about earlier
+failures, since a successful refresh cannot restore a failed write.
+There is no cloud storage, export, account system or reporting engine.
+
+### Optional network history retention
+
+Continuous five-second storage can produce about 17,280 detailed rows per day
+before accounting for PowerShell timing and session-boundary flushes. To
+preserve existing history, automatic deletion is **disabled by default**.
+An optional retention policy uses a **30-day period** when enabled:
+
+```shell
+mvn exec:java "-Dexec.args=gui" "-Dnetpulse.history.retention.enabled=true"
+```
+
+To choose a different period, add `"-Dnetpulse.history.retention.days=60"`.
+Allowed values are whole numbers from 1 to 36500. An invalid value disables
+deletion and prints an explanation. These launch settings must be supplied
+again on future launches; they are not alert settings stored in SQLite.
+Storage status shows whether retention is off or the configured number of days.
+
+When explicitly enabled, cleanup runs on the database worker at startup and
+on the next database operation after each hour. It deletes only
+`network_history` rows whose UTC timestamp is strictly older than the configured
+period. Alerts, daily summaries and alert settings remain unchanged. Disable
+it by omitting the enabled property or setting it to `false`. Deleted readings
+cannot be recovered from NetPulse. SQLite normally reuses freed pages; the
+database file may not shrink immediately. No automatic `VACUUM` blocks the UI.
 
 ## Run TCP transfers
 
@@ -665,7 +695,7 @@ traffic. Close other NetPulse windows and stop any server on that port first.
 Run them on an interactive Windows desktop with an active adapter:
 
 ```shell
-mvn test "-Dtest=DashboardDesktopTest,TrafficAlertsDesktopTest,PersistenceDesktopTest" "-Dnetpulse.gui.smoke=true"
+mvn test "-Dtest=DashboardDesktopTest,TrafficAlertsDesktopTest,PersistenceDesktopTest,StabilityDesktopTest" "-Dnetpulse.gui.smoke=true"
 ```
 
 The dashboard test verifies opening the dashboard, adapter refresh/selection, real live speeds,
@@ -683,7 +713,15 @@ the dashboard, verify restored settings and history tabs, cancel and confirm
 alert deletion, and check recovery from a blocked database path. The history
 viewer screenshot is saved to `target/netpulse-history.png`. All desktop tests
 use temporary database paths rather than the real `data/netpulse.db`.
-Normal `mvn test` skips these four opt-in desktop test cases.
+`StabilityDesktopTest` also starts the real TCP server in a separate JVM,
+checks GUI uploads/downloads and exact throughput calculations, closes the
+dashboard during or shortly after a large transfer with monitoring active,
+and verifies graceful server shutdown and port reuse. It tests empty history,
+1,000 clearly labelled history fixtures, all three time filters, the 500-row
+display cap, database-lock errors, failed deletion preserving alerts, smaller
+windows, and closing while a confirmation dialog is open. Fixture history
+is confined to temporary test databases and is not presented as real traffic.
+Normal `mvn test` skips these seven opt-in desktop test cases.
 
 Alert unit tests cover independent thresholds, severity, strict comparisons,
 suppression, clear/re-cross behavior, inactivity duration/reset, duplicate and
@@ -695,4 +733,27 @@ They cover initialization/table creation, prepared-statement round trips,
 duplicate suppression, time filtering, unavailable-reading exclusion, default
 and updated settings, alert clearing, transaction rollback, daily totals,
 five-second storage cadence, session restarts, shutdown flushing, locked and
-unavailable database recovery, and file/connection cleanup.
+unavailable database recovery, and file/connection cleanup. Regression tests
+also cover final readings that the periodic collector has not seen, consecutive
+monitoring sessions, queue saturation, retention cutoffs, preservation of alerts
+and summaries, and valid/invalid retention configuration.
+
+## Verification status and remaining limits
+
+See [Phase 9 verification](docs/PHASE9_VERIFICATION.md) for the tested workflows,
+bug fixes, commands and actual Windows results. This phase does not create an
+installer or bundled runtime.
+
+The application requires an interactive Windows desktop, JDK 25, Maven, and
+working NetAdapter PowerShell commands for real adapter statistics. Restricted
+machines and unsupported interfaces may produce unavailable readings. Internet
+activity and idle periods depend on the computer; deterministic counter tests
+cover cases that cannot be forced reliably on an active adapter.
+
+TCP testing remains localhost-only, without authentication/encryption or an
+Internet capacity/packet-loss test. Graphs and alerts inherit the adapter
+sampling delay. Daily totals describe valid observed intervals, not continuous
+24-hour capture. History filtering returns at most 500 rows per tab; large
+databases are not fully loaded into Swing. Long storage outages and forced
+termination can still lose records. Retention is opt-in, and alerts/daily
+summaries continue growing until explicitly managed in a later phase.

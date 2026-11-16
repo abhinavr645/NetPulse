@@ -22,11 +22,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Function;
 
 /** Coordinates existing services; every Swing update runs on the EDT. */
 final class DashboardController {
     private final DashboardPanel view;
     private final BandwidthClient client;
+    private final Function<NetworkAdapter, NetworkAdapterMonitor> monitorFactory;
     private final TrafficAnalyzer analyzer = new TrafficAnalyzer();
     private final PersistenceService persistence;
     private boolean storageLoading = true;
@@ -38,6 +40,7 @@ final class DashboardController {
     // Virtual threads make the existing Socket I/O interruptible during window shutdown.
     private final ExecutorService tasks = Executors.newVirtualThreadPerTaskExecutor();
     private final Object monitorLock = new Object();
+    private final Object collectionLock = new Object();
     private final Timer displayTimer;
     private final ScheduledExecutorService graphCollector = Executors.newSingleThreadScheduledExecutor(
             task -> new Thread(task, "netpulse-graph-collector"));
@@ -59,8 +62,15 @@ final class DashboardController {
     }
 
     DashboardController(DashboardPanel view, BandwidthClient client, Path databasePath) {
+        this(view, client, databasePath, NetworkAdapterMonitor::new);
+    }
+
+    // A monitor factory lets lifecycle tests supply controlled readings without Windows queries.
+    DashboardController(DashboardPanel view, BandwidthClient client, Path databasePath,
+                        Function<NetworkAdapter, NetworkAdapterMonitor> monitorFactory) {
         this.view = view;
         this.client = client;
+        this.monitorFactory = monitorFactory;
         persistence = new PersistenceService(databasePath, (available, message) -> onEdt(() -> {
             view.storageStatus.setText(message);
             view.storageStatus.setForeground(available ? DashboardStyle.MUTED : DashboardStyle.ERROR);
@@ -137,14 +147,20 @@ final class DashboardController {
         view.monitorMessage.setText("Starting a new adapter monitoring session...");
         updateControls();
         tasks.submit(() -> {
-            NetworkAdapterMonitor created = new NetworkAdapterMonitor(selected);
+            NetworkAdapterMonitor created = monitorFactory.apply(selected);
             try {
                 synchronized (monitorLock) {
                     if (closing) {
                         created.close();
                         return;
                     }
-                    monitor = created;
+                    synchronized (collectionLock) {
+                        persistence.beginSession();
+                        analyzer.resetSession();
+                        graphMonitor = created;
+                        lastGraphSnapshot = null;
+                        monitor = created;
+                    }
                     created.start();
                 }
                 onEdt(() -> {
@@ -187,15 +203,21 @@ final class DashboardController {
             NetworkAdapterMonitor stopped;
             synchronized (monitorLock) {
                 stopped = monitor;
-                monitor = null;
+            }
+            if (stopped == null) {
+                return; // Shutdown already took ownership of this monitor.
             }
             try {
-                stopped.stop();
-                persistence.flush();
+                finishMonitoring(stopped);
                 onEdt(() -> view.showSnapshot(stopped.getSnapshot()));
             } catch (Exception exception) {
                 onEdt(() -> view.monitorMessage.setText("Could not stop monitoring: " + exception.getMessage()));
             } finally {
+                synchronized (monitorLock) {
+                    if (monitor == stopped) {
+                        monitor = null;
+                    }
+                }
                 onEdt(() -> {
                     monitoringBusy = false;
                     view.monitoringStatus.setText("Stopped");
@@ -215,6 +237,12 @@ final class DashboardController {
     }
 
     private void collectGraphSample() {
+        synchronized (collectionLock) {
+            collectLatestSnapshot();
+        }
+    }
+
+    private void collectLatestSnapshot() {
         NetworkAdapterMonitor active = monitor;
         if (closing) {
             return;
@@ -223,7 +251,6 @@ final class DashboardController {
             graphMonitor = active;
             lastGraphSnapshot = null;
             analyzer.resetSession();
-            persistence.beginSession();
         }
         if (active != null) {
             NetworkStatisticsSnapshot snapshot = active.getSnapshot();
@@ -244,6 +271,16 @@ final class DashboardController {
                     }
                 });
             }
+        }
+    }
+
+    private void finishMonitoring(NetworkAdapterMonitor active) {
+        NetworkStatisticsSnapshot last = active.stopAndGetLastSnapshot();
+        synchronized (collectionLock) {
+            // May be newer than the collector's last 200 ms poll. Identity deduplication
+            // prevents counting it twice if it was already collected.
+            persistence.recordSnapshot(last);
+            persistence.flush();
         }
     }
 
@@ -319,7 +356,7 @@ final class DashboardController {
     private void clearAlertHistory() {
         if (!closing && !clearingAlerts && JOptionPane.showConfirmDialog(view,
                 "Clear recent alerts and permanently delete all saved alerts?", "Clear alert history",
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.OK_OPTION) {
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.OK_OPTION && !closing) {
             clearingAlerts = true;
             updateControls();
             graphCollector.execute(() -> {
@@ -431,7 +468,7 @@ final class DashboardController {
     }
 
     // Also safe for the JVM shutdown hook: this method never touches Swing components.
-    void stopBackgroundWork() {
+    synchronized void stopBackgroundWork() {
         closing = true;
         alertMonitoringActive = false;
         graphCollector.shutdownNow();
@@ -441,10 +478,10 @@ final class DashboardController {
             active = monitor;
             monitor = null;
         }
-        if (active != null) {
-            active.stop();
-        }
         try {
+            if (active != null) {
+                finishMonitoring(active);
+            }
             if (!graphCollector.awaitTermination(3, TimeUnit.SECONDS)) {
                 throw new IllegalStateException("Graph collector did not terminate.");
             }

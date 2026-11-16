@@ -15,7 +15,6 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.InputEvent;
 import java.awt.event.WindowEvent;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -220,23 +219,14 @@ class DashboardDesktopTest {
         System.out.println("GUI VERIFIED: live graphs, graph freeze, resizing, adapter controls, TCP tests, and shutdown.");
     }
 
-    private static void click(Robot robot, JComponent component) throws Exception {
-        SwingUtilities.invokeAndWait(() -> component.scrollRectToVisible(
-                new Rectangle(0, 0, component.getWidth(), component.getHeight())));
+    private static void click(Robot robot, AbstractButton button) throws Exception {
+        SwingUtilities.invokeAndWait(() -> button.scrollRectToVisible(
+                new Rectangle(0, 0, button.getWidth(), button.getHeight())));
         robot.waitForIdle();
-        if (component instanceof AbstractButton button) {
-            SwingUtilities.invokeAndWait(() -> {
-                assertTrue(button.isEnabled());
-                button.doClick(0);
-            });
-            robot.waitForIdle();
-            return;
-        }
-        Point point = onEdt(component::getLocationOnScreen);
-        Dimension size = onEdt(component::getSize);
-        robot.mouseMove(point.x + size.width / 2, point.y + size.height / 2);
-        robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-        robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+        SwingUtilities.invokeAndWait(() -> {
+            assertTrue(button.isEnabled());
+            button.doClick(0);
+        });
         robot.waitForIdle();
     }
 
