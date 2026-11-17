@@ -1,3 +1,4 @@
+C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\database\ApplicationPathTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\database\DatabaseRepositoryTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\database\PersistenceServiceTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\model\BandwidthGraphHistoryTest.java
@@ -13,6 +14,7 @@ C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\BandwidthGraphPan
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\DashboardControllerTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\DashboardDesktopTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\DashboardPanelTest.java
+C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\PackagedSmokeAgent.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\PersistenceDesktopTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\StabilityDesktopTest.java
 C:\Users\abhin\projects\NetPulse\src\test\java\com\netpulse\ui\TrafficAlertsDesktopTest.java

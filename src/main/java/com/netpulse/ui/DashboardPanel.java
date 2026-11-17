@@ -29,6 +29,9 @@ public class DashboardPanel extends JPanel implements Scrollable {
     final JComboBox<String> transferMode = new JComboBox<>(new String[]{"Upload", "Download"});
     final JTextField transferSize = new JTextField("10", 8);
     final JButton startTestButton = button("Start Test", true);
+    final JButton startServerButton = button("Start local server", false);
+    final JButton stopServerButton = button("Stop local server", false);
+    final JLabel serverStatus = label("Local server: Stopped", 12, MUTED);
 
     final JLabel monitoringStatus = label("Stopped", 13, MUTED);
     final JLabel adapterDetails = label("Loading network adapters...", 13, MUTED);
@@ -45,7 +48,7 @@ public class DashboardPanel extends JPanel implements Scrollable {
     final JLabel testThroughput = label("-- Mbps", 24, TEXT);
     final JLabel testElapsed = label("-- seconds", 24, TEXT);
     final JLabel testBytes = label("-- bytes", 24, TEXT);
-    final JTextArea testMessage = messageArea("Start the local TCP server before running a test.");
+    final JTextArea testMessage = messageArea("Click Start local server before running a TCP test.");
 
     // These retain exactly the immutable models rendered on screen.
     NetworkStatisticsSnapshot displayedSnapshot;
@@ -158,6 +161,13 @@ public class DashboardPanel extends JPanel implements Scrollable {
         heading.add(label("Application payload · 127.0.0.1:5001 · separate from adapter traffic", 12, MUTED));
         section.add(heading, BorderLayout.NORTH);
         JPanel body = vertical(SURFACE);
+        JPanel serverControls = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 4));
+        serverControls.setOpaque(false);
+        serverControls.setAlignmentX(Component.LEFT_ALIGNMENT);
+        serverControls.add(startServerButton);
+        serverControls.add(stopServerButton);
+        serverControls.add(serverStatus);
+        body.add(serverControls);
         JPanel form = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 4));
         form.setOpaque(false);
         form.setAlignmentX(Component.LEFT_ALIGNMENT);

@@ -18,8 +18,20 @@ public class DatabaseManager implements AutoCloseable {
     }
 
     public static Path defaultPath() {
-        // Tests override this property with a temporary location.
-        return Path.of(System.getProperty("netpulse.database.path", "data/netpulse.db"));
+        return resolvePath(System.getProperty("netpulse.database.path"), Boolean.getBoolean("netpulse.packaged"),
+                System.getenv("LOCALAPPDATA"), Path.of(System.getProperty("user.home")));
+    }
+
+    static Path resolvePath(String override, boolean packaged, String localAppData, Path userHome) {
+        if (override != null && !override.isBlank()) {
+            return Path.of(override);
+        }
+        if (!packaged) {
+            return Path.of("data", "netpulse.db");
+        }
+        Path root = localAppData == null || localAppData.isBlank()
+                ? userHome.resolve("AppData").resolve("Local") : Path.of(localAppData);
+        return root.resolve("NetPulse").resolve("netpulse.db");
     }
 
     public Path getPath() {

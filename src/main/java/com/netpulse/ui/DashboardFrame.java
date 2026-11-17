@@ -12,6 +12,8 @@ public class DashboardFrame extends JFrame {
 
     public DashboardFrame() {
         super("NetPulse - Network Bandwidth Dashboard");
+        var icon = DashboardFrame.class.getResource("netpulse.png");
+        if (icon != null) setIconImage(new ImageIcon(icon).getImage());
         DashboardStyle.apply();
         dashboard = new DashboardPanel();
         controller = new DashboardController(dashboard);

@@ -1,5 +1,6 @@
 /target/
 /data/
+/release/
 *.db-journal
 *.db-wal
 *.db-shm

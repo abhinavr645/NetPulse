@@ -8,6 +8,7 @@ import com.netpulse.model.TrafficAlert;
 import com.netpulse.monitoring.NetworkAdapterMonitor;
 import com.netpulse.monitoring.TrafficAnalyzer;
 import com.netpulse.network.BandwidthClient;
+import com.netpulse.network.BandwidthServer;
 import com.netpulse.database.DatabaseManager;
 import com.netpulse.database.PersistenceService;
 
@@ -52,6 +53,9 @@ final class DashboardController {
     private boolean adaptersBusy;
     private boolean monitoringBusy;
     private boolean testBusy;
+    private final Object serverLock = new Object();
+    private volatile BandwidthServer localServer;
+    private boolean serverBusy;
 
     DashboardController(DashboardPanel view) {
         this(view, new BandwidthClient());
@@ -81,6 +85,8 @@ final class DashboardController {
         view.stopMonitoringButton.addActionListener(event -> stopMonitoring());
         view.refreshButton.addActionListener(event -> refreshSnapshot());
         view.startTestButton.addActionListener(event -> startTest());
+        view.startServerButton.addActionListener(event -> startLocalServer());
+        view.stopServerButton.addActionListener(event -> stopLocalServer());
         view.alerts.applyButton.addActionListener(event -> applyAlertSettings());
         view.alerts.enabled.addActionListener(event -> applyAlertSettings());
         view.alerts.clearButton.addActionListener(event -> clearAlertHistory());
@@ -308,7 +314,7 @@ final class DashboardController {
                 TransferResult result = client.transfer(mode, bytes);
                 onEdt(() -> view.showResult(result));
             } catch (ConnectException exception) {
-                onEdt(() -> showTestError("Cannot connect to 127.0.0.1:5001. Start the NetPulse server and try again."));
+                onEdt(() -> showTestError("Cannot connect to 127.0.0.1:5001. Click Start local server or start the CLI server."));
             } catch (SocketTimeoutException exception) {
                 onEdt(() -> showTestError("The TCP server timed out. Check that it is running, then try again."));
             } catch (Exception exception) {
@@ -320,6 +326,69 @@ final class DashboardController {
                 });
             }
         });
+    }
+
+    private void startLocalServer() {
+        if (closing || serverBusy || localServer != null) return;
+        serverBusy = true;
+        view.serverStatus.setText("Local server: Starting...");
+        updateControls();
+        tasks.submit(() -> {
+            try {
+                synchronized (serverLock) {
+                    if (closing) return;
+                    BandwidthServer created = new BandwidthServer();
+                    try {
+                        created.start();
+                        localServer = created;
+                    } catch (RuntimeException exception) {
+                        created.close();
+                        throw exception;
+                    }
+                }
+                onEdt(() -> {
+                    view.serverStatus.setText("Local server: Running on 127.0.0.1:5001");
+                    view.serverStatus.setForeground(DashboardStyle.GREEN);
+                });
+            } catch (java.net.BindException exception) {
+                onEdt(() -> {
+                    view.serverStatus.setText("Port 5001 is in use; stop that server or use it for tests.");
+                    view.serverStatus.setForeground(DashboardStyle.ERROR);
+                });
+            } catch (Exception exception) {
+                onEdt(() -> {
+                    view.serverStatus.setText("Could not start local server: " + exception.getMessage());
+                    view.serverStatus.setForeground(DashboardStyle.ERROR);
+                });
+            } finally {
+                onEdt(() -> { serverBusy = false; updateControls(); });
+            }
+        });
+    }
+
+    private void stopLocalServer() {
+        if (closing || serverBusy || localServer == null) return;
+        serverBusy = true;
+        view.serverStatus.setText("Local server: Stopping...");
+        updateControls();
+        tasks.submit(() -> {
+            closeOwnedServer();
+            onEdt(() -> {
+                serverBusy = false;
+                view.serverStatus.setText("Local server: Stopped");
+                view.serverStatus.setForeground(DashboardStyle.MUTED);
+                updateControls();
+            });
+        });
+    }
+
+    private void closeOwnedServer() {
+        BandwidthServer owned;
+        synchronized (serverLock) {
+            owned = localServer;
+            localServer = null;
+        }
+        if (owned != null) owned.close();
     }
 
     private void applyAlertSettings() {
@@ -426,6 +495,8 @@ final class DashboardController {
         view.stopMonitoringButton.setEnabled(!closing && !monitoringBusy && monitor != null);
         view.refreshButton.setEnabled(!closing && !monitoringBusy && monitor != null);
         view.startTestButton.setEnabled(!closing && !testBusy);
+        view.startServerButton.setEnabled(!closing && !serverBusy && localServer == null);
+        view.stopServerButton.setEnabled(!closing && !serverBusy && localServer != null);
         view.transferMode.setEnabled(!closing && !testBusy);
         view.transferSize.setEnabled(!closing && !testBusy);
         view.alerts.enabled.setEnabled(!closing && !storageLoading && !alertSettingsBusy);
@@ -479,6 +550,7 @@ final class DashboardController {
             monitor = null;
         }
         try {
+            closeOwnedServer();
             if (active != null) {
                 finishMonitoring(active);
             }

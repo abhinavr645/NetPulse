@@ -13,7 +13,6 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.InputEvent;
 import java.awt.event.WindowEvent;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -108,10 +107,19 @@ class TrafficAlertsDesktopTest {
             ImageIO.write(robot.createScreenCapture(onEdt(frame::getBounds)), "png", screenshot.toFile());
             System.out.println("GUI alert screenshot: " + screenshot.toAbsolutePath());
 
-            click(robot, panel.alerts.clearButton);
-            robot.keyPress(java.awt.event.KeyEvent.VK_ENTER);
-            robot.keyRelease(java.awt.event.KeyEvent.VK_ENTER);
-            robot.waitForIdle();
+            SwingUtilities.invokeLater(() -> panel.alerts.clearButton.doClick(0));
+            await(() -> {
+                for (Window window : Window.getWindows()) {
+                    if (window instanceof JDialog dialog && dialog.isShowing()
+                            && dialog.getTitle().equals("Clear alert history")) {
+                        JOptionPane confirmation = findPane(dialog);
+                        assertNotNull(confirmation, "The confirmation must contain its option pane.");
+                        confirmation.setValue(JOptionPane.OK_OPTION);
+                        return true;
+                    }
+                }
+                return false;
+            }, 3_000, "Clear-history confirmation was not displayed.");
             await(() -> panel.alerts.displayedAlerts.isEmpty(), 3_000, "History was not cleared.");
             // Disabling remains possible even if a draft field has become invalid.
             SwingUtilities.invokeAndWait(() -> panel.alerts.downloadThreshold.setText("invalid draft"));
@@ -160,25 +168,26 @@ class TrafficAlertsDesktopTest {
                 || thread.getName().equals("netpulse-adapter-monitor"))));
     }
 
-    private static void click(Robot robot, JComponent component) throws Exception {
-        SwingUtilities.invokeAndWait(() -> component.scrollRectToVisible(
-                new Rectangle(0, 0, component.getWidth(), component.getHeight())));
+    private static void click(Robot robot, AbstractButton button) throws Exception {
+        SwingUtilities.invokeAndWait(() -> button.scrollRectToVisible(
+                new Rectangle(0, 0, button.getWidth(), button.getHeight())));
         robot.waitForIdle();
-        if (component instanceof AbstractButton button && !button.getText().equals("Clear history")) {
-            // Swing actions avoid native pointer/scroll timing during desktop automation.
-            SwingUtilities.invokeAndWait(() -> {
-                assertTrue(button.isEnabled());
-                button.doClick(0);
-            });
-            robot.waitForIdle();
-            return;
+        SwingUtilities.invokeAndWait(() -> {
+            assertTrue(button.isEnabled());
+            button.doClick(0);
+        });
+        robot.waitForIdle();
+    }
+
+    private static JOptionPane findPane(Container container) {
+        if (container instanceof JOptionPane pane) return pane;
+        for (Component component : container.getComponents()) {
+            if (component instanceof Container child) {
+                JOptionPane found = findPane(child);
+                if (found != null) return found;
+            }
         }
-        Point point = onEdt(component::getLocationOnScreen);
-        Dimension size = onEdt(component::getSize);
-        robot.mouseMove(point.x + size.width / 2, point.y + size.height / 2);
-        robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-        robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-        robot.waitForIdle();
+        return null;
     }
 
     private static <T> T onEdt(Supplier<T> action) throws Exception {

@@ -22,4 +22,6 @@ com\netpulse\ui\DashboardPanelTest.class
 com\netpulse\model\BandwidthGraphHistoryTest.class
 com\netpulse\monitoring\WindowsAdapterStatisticsTest.class
 com\netpulse\ui\BandwidthGraphPanelTest.class
+com\netpulse\database\ApplicationPathTest.class
 com\netpulse\monitoring\BandwidthMeasurementTest.class
+com\netpulse\ui\PackagedSmokeAgent.class

@@ -6,8 +6,55 @@ and monitoring history stored in SQLite.
 
 NetPulse includes SQLite monitoring history, daily observed-traffic summaries,
 persistent alerts and saved alert settings, plus a dashboard history viewer.
-Phase 9 verifies the complete application and fixes lifecycle/storage edge
-cases. Adapter statistics and TCP payload measurements remain separate.
+Phase 10 adds a self-contained Windows release, local server controls and
+college submission documentation. Adapter statistics and TCP payload
+measurements remain separate.
+
+## Windows release and submission documents
+
+The distributable is `release/NetPulse-1.0.0-windows-x64.zip`. Extract the whole
+ZIP, open its `NetPulse` folder and use **NetPulse.cmd**. The batch launcher
+uses the bundled, vendor-signed `runtime/bin/javaw.exe`, opens the GUI by default
+and requires no separately installed Java or Maven. Keep `app` and `runtime`
+beside the launchers. The image is built with JDK 25 `jpackage` and is a portable
+application folder, not an MSI/setup installer.
+
+`NetPulse.exe` is also generated with the project icon. Windows Application
+Control on the verification machine blocks this unsigned generated EXE before
+Java starts. It is therefore not claimed as verified. No security policy was
+disabled; the signed-runtime launcher is supplied as the runnable release path.
+See the exact results and limitations in
+[Phase 10 release verification](docs/PHASE10_RELEASE_VERIFICATION.md).
+
+- [College project report](docs/NetPulse_Project_Report.md) — editable student,
+  USN, college and guide fields; actual implementation and references.
+- [Quick start and demonstration](docs/QUICK_START.md).
+- [Four maintained Mermaid architecture diagrams](docs/ARCHITECTURE.md).
+- [Verified screenshots](docs/screenshots/) and [dependency notices](docs/THIRD_PARTY_NOTICES.md).
+
+Packaged SQLite data is stored at `%LOCALAPPDATA%\NetPulse\netpulse.db`, with a
+user-home local-data fallback, rather than in the installation directory.
+Developer commands below retain `data/netpulse.db`. Data is not automatically
+migrated between developer and packaged locations.
+
+To reproduce the release on Windows with JDK 25 and Maven:
+
+```powershell
+mvn clean compile
+mvn test
+mvn test "-Dtest=DashboardDesktopTest,TrafficAlertsDesktopTest,PersistenceDesktopTest,StabilityDesktopTest" "-Dnetpulse.gui.smoke=true"
+.\packaging\Build-WindowsRelease.ps1
+.\packaging\Verify-WindowsRelease.ps1 -Launcher Runtime
+```
+
+The build script runs Maven package/tests, stages only runtime JARs, invokes
+`jpackage`, preserves licenses and builds a ZIP plus SHA-256 checksum. It replaces
+only its generated versioned release directory and staging directory. Generated
+releases are excluded from Git. The verification script uses isolated
+`LOCALAPPDATA`, clears Java/Maven from the child's PATH and removes JAVA_HOME;
+its external test agent and evidence remain under `target/`, outside the release.
+`-Launcher Native` checks the generated EXE where policy permits it. Running
+the release on a separate machine with no JDK installed has not been verified.
 
 ## Technologies
 
@@ -26,6 +73,7 @@ cases. Adapter statistics and TCP payload measurements remain separate.
 ```text
 src/main/java/com/netpulse/
     Main.java
+    DesktopLauncher.java
     network/
         BandwidthServer.java
         BandwidthClient.java
@@ -130,7 +178,10 @@ The dashboard provides:
 - Inline error messages for unavailable adapters, PowerShell failures, invalid
   transfer sizes, missing servers, and connection timeouts.
 
-To use the TCP section, start the existing server in a second terminal:
+To use the TCP section, click **Start local server** and confirm the displayed
+Running status. **Stop local server** closes only the server started by that
+dashboard. An occupied port produces a clear error. An alternative is to start
+the existing server in a second terminal:
 
 ```shell
 mvn exec:java "-Dexec.args=server"
@@ -139,7 +190,7 @@ mvn exec:java "-Dexec.args=server"
 Then select Upload or Download in the dashboard and click Start Test. The
 default GUI size of `10` MB means exactly 10,000,000 bytes. Fractional MB values
 are allowed when they represent whole bytes; the maximum is 1073.741824 MB
-(1 GiB). The GUI does not automatically start a server. If none is listening on
+(1 GiB). The GUI starts a server only when requested. If none is listening on
 `127.0.0.1:5001`, it reports a connection error and remains responsive.
 
 Dashboard responsibilities are separated:
@@ -147,7 +198,8 @@ Dashboard responsibilities are separated:
 - `DashboardPanel` creates components and renders existing immutable models.
 - `DashboardController` calls `NetworkAdapterMonitor.listAdapters()`, creates
   the selected monitor, and invokes the existing `BandwidthClient.transfer()`.
-  The server continues to use the existing `BandwidthServer` CLI command.
+  Local server controls reuse `BandwidthServer` on background tasks; its CLI
+  command remains available. The TCP protocol is unchanged.
 - A 500 ms Swing timer reads the monitor's thread-safe snapshot getter. Actual
   counter updates still follow the existing PowerShell sampling interval;
   the GUI does not invent intermediate readings.
@@ -158,7 +210,8 @@ Dashboard responsibilities are separated:
   I/O without changing the TCP engine. Window closing stops the timer, cancels
   background work, stops monitoring/PowerShell, and waits for cleanup on a
   separate thread before disposing the window. A JVM shutdown hook also cleans
-  up owned background work. An externally started CLI server remains separate.
+  up owned background work, including a dashboard-owned local server. An
+  externally started CLI server remains separate.
 
 The window can be resized and scrolled on smaller screens. Unavailable speeds
 display `--`; a measured zero displays `0.000000`. Totals describe valid observed
@@ -301,9 +354,13 @@ connectivity test.
 
 ## SQLite history and settings
 
-NetPulse automatically creates `data/netpulse.db` relative to the working
-directory, normally the project root. Run commands from that folder to keep
-using the same database. `.gitignore` excludes `data/` and SQLite sidecar files.
+Source/developer NetPulse automatically creates `data/netpulse.db` relative to
+the working directory, normally the project root. The packaged launcher uses
+`%LOCALAPPDATA%\NetPulse\netpulse.db`, falling back to the user's
+`AppData/Local/NetPulse` directory if the environment variable is missing.
+An explicit `netpulse.database.path` test/developer override takes precedence.
+Run source commands from the project folder to keep using the same developer
+database. `.gitignore` excludes `data/`, `release/` and SQLite sidecar files.
 No additional dependency is required: the existing SQLite JDBC driver is used.
 The checked-in `.mvn/jvm.config` and Surefire configuration enable its native
 access on JDK 25. If launching Java directly, add
@@ -740,9 +797,10 @@ and summaries, and valid/invalid retention configuration.
 
 ## Verification status and remaining limits
 
-See [Phase 9 verification](docs/PHASE9_VERIFICATION.md) for the tested workflows,
-bug fixes, commands and actual Windows results. This phase does not create an
-installer or bundled runtime.
+See [Phase 9 verification](docs/PHASE9_VERIFICATION.md) for the approved stability
+baseline and [Phase 10 release verification](docs/PHASE10_RELEASE_VERIFICATION.md)
+for final packaging results. A bundled runtime/application image is supplied;
+an installer, code signing and separate clean-machine testing are not claimed.
 
 The application requires an interactive Windows desktop, JDK 25, Maven, and
 working NetAdapter PowerShell commands for real adapter statistics. Restricted
